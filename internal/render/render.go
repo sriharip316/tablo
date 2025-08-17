@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/sriharip316/tablo/internal/flatten"
@@ -150,7 +153,8 @@ func headerCase(h, mode string) string {
 	case "lower":
 		return strings.ToLower(h)
 	case "title":
-		return strings.Title(strings.ReplaceAll(h, "_", " "))
+		caser := cases.Title(language.Und)
+		return caser.String(strings.ReplaceAll(h, "_", " "))
 	default:
 		return h
 	}
@@ -229,9 +233,7 @@ func wrapEnforcer(o Options) table.WidthEnforcer {
 				suf = ""
 			}
 			keep := width - len([]rune(suf))
-			if keep < 0 {
-				keep = 0
-			}
+			keep = max(keep, 0)
 			return string(r[:keep]) + suf
 		}
 	}
