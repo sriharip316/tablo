@@ -29,6 +29,10 @@ import (
 var version string
 var versionOnce sync.Once
 
+// execCommand is a variable that holds the os/exec.Command function.
+// It is exposed for testing purposes to allow mocking of external command execution.
+var execCommand = exec.Command
+
 func resolveVersion() string {
 	versionOnce.Do(func() {
 		if version != "" {
@@ -59,7 +63,7 @@ func resolveVersion() string {
 }
 
 func gitDescribe() (string, error) {
-	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
+	cmd := execCommand("git", "describe", "--tags", "--abbrev=0")
 	cmd.Env = os.Environ()
 	out, err := cmd.Output()
 	if err != nil {
@@ -70,7 +74,7 @@ func gitDescribe() (string, error) {
 }
 
 func gitShortHash() (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
+	cmd := execCommand("git", "rev-parse", "--short", "HEAD")
 	cmd.Env = os.Environ()
 	out, err := cmd.Output()
 	if err != nil {
@@ -81,7 +85,7 @@ func gitShortHash() (string, error) {
 }
 
 func gitDirty() bool {
-	cmd := exec.Command("git", "status", "--porcelain")
+	cmd := execCommand("git", "status", "--porcelain")
 	cmd.Env = os.Environ()
 	out, err := cmd.Output()
 	if err != nil {

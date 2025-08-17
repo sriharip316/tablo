@@ -211,6 +211,9 @@ func resolveStyle(o Options) table.Style {
 }
 
 func wrapEnforcer(o Options) table.WidthEnforcer {
+	// To improve test coverage, a test case should be added in render_test.go
+	// to specifically cover the scenario where o.TruncateSuffix is longer
+	// than the available column width. This ensures the `suf = ""` line is hit.
 	switch strings.ToLower(o.WrapMode) {
 	case "char":
 		return text.WrapText

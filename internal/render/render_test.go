@@ -60,9 +60,53 @@ func TestHeaderCase(t *testing.T) {
 
 func TestWrapEnforcer_Truncate(t *testing.T) {
 	en := wrapEnforcer(Options{WrapMode: "off", TruncateSuffix: ".."})
+
+	// Test case: basic truncation
 	got := en("abcdefgh", 5)
 	if got != "abc.." {
-		t.Fatalf("truncate: %q", got)
+		t.Fatalf("truncate: %q, want %q", got, "abc..")
+	}
+
+	// Test case: width <= 0 should return original string
+	got = en("abcdefgh", 0)
+	if got != "abcdefgh" {
+		t.Fatalf("width 0: %q, want %q", got, "abcdefgh")
+	}
+	got = en("abcdefgh", -5)
+	if got != "abcdefgh" {
+		t.Fatalf("width -5: %q, want %q", got, "abcdefgh")
+	}
+
+	// Test case: len(s) <= width should return original string
+	got = en("abc", 5)
+	if got != "abc" {
+		t.Fatalf("len <= width: %q, want %q", got, "abc")
+	}
+
+	// Test case: len(suffix) > width, should not add suffix, truncate if needed
+	en = wrapEnforcer(Options{WrapMode: "off", TruncateSuffix: "longsuffix"})
+	got = en("abc", 2) // width 2, suffix "longsuffix" (len 10). Should truncate to "ab"
+	if got != "ab" {
+		t.Fatalf("suffix longer than width, string fits: %q, want %q", got, "ab")
+	}
+	got = en("abcdefgh", 5) // width 5, suffix "longsuffix" (len 10). Should truncate to "abcde"
+	if got != "abcde" {
+		t.Fatalf("suffix longer than width, string longer than width: %q, want %q", got, "abcde")
+	}
+
+	// Test cases for "char" and "word" wrap modes (only ensure they return different enforcers)
+	enChar := wrapEnforcer(Options{WrapMode: "char"})
+	enWord := wrapEnforcer(Options{WrapMode: "word"})
+	enOff := wrapEnforcer(Options{WrapMode: "off"})
+
+	// We can't directly compare function pointers, so we compare behavior for a simple case.
+	// This mainly checks that it's not the "off" mode's truncation for "char" and "word".
+	// The actual wrapping logic is handled by the `go-pretty` library's `text.WrapText` and `text.WrapSoft`.
+	if enChar("test", 2) == enOff("test", 2) {
+		t.Fatalf("char wrap enforcer appears to be same as off wrap enforcer")
+	}
+	if enWord("test", 2) == enOff("test", 2) {
+		t.Fatalf("word wrap enforcer appears to be same as off wrap enforcer")
 	}
 }
 
