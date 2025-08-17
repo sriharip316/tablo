@@ -1,0 +1,31 @@
+id: 123
+name: Test Object
+description: |
+  This is a long description field intended to test handling of large text values in JSON. It contains multiple sentences, special characters like !@#$%^&*(), and even some unicode: 測試, тест, prueba. The purpose is to ensure that systems parsing this JSON can handle lengthy strings without truncation or errors. This description should be long enough to cover edge cases in text processing, including line breaks.
+  Here is a new line for good measure.
+active: true
+meta:
+  created: "2024-06-01T12:00:00Z"
+  tags:
+    - alpha
+    - beta
+    - gamma
+  rating: 4.5
+  owner:
+    user_id: 456
+    username: tester
+    contact:
+      email: tester@example.com
+      phone: null
+settings:
+  theme: dark
+  notifications:
+    email: false
+    sms: true
+    push: true
+items:
+  - type: A
+    value: 10
+  - type: B
+    value: 20
+misc: null
