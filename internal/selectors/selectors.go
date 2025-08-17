@@ -126,7 +126,9 @@ func HeadersUnion(rows []flatten.FlatKV) []string {
 	order := []string{}
 	seen := map[string]struct{}{}
 	for _, r := range rows {
-		for k := range r {
+		// Get keys in sorted order to ensure deterministic iteration
+		keys := r.Keys()
+		for _, k := range keys {
 			if _, ok := seen[k]; !ok {
 				seen[k] = struct{}{}
 				order = append(order, k)
