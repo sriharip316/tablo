@@ -142,3 +142,42 @@ func TestCLI_ConflictingInputs(t *testing.T) {
 		t.Fatalf("unexpected: code=%d stderr=%q", code, errOut)
 	}
 }
+
+func TestCLI_StrictSelect_Success(t *testing.T) {
+	// Single object with nested maps; strict select should succeed when all patterns match.
+	args := []string{
+		"-i", `{"a":{"x":{"c":1},"y":{"c":2}},"b":3,"z":4}`,
+		"--dive",
+		"--select", "a.*.c,b",
+		"--strict-select",
+		"--style", "ascii",
+	}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Expect flattened keys a.x.c, a.y.c and key b; z should be excluded
+	for _, want := range []string{"a.x.c", "a.y.c", "b"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing selected key %s in output: %s", want, out)
+		}
+	}
+	if strings.Contains(out, "z") {
+		t.Fatalf("unexpected key z present: %s", out)
+	}
+}
+
+func TestCLI_PrimitiveArray_IndexColumn(t *testing.T) {
+	args := []string{"-i", `[10,20]`, "--index-column", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Expect index numbers 1 and 2 and corresponding values 10 and 20
+	if !strings.Contains(out, "| 1 ") || !strings.Contains(out, "| 2 ") {
+		t.Fatalf("missing index column values: %s", out)
+	}
+	if !strings.Contains(out, "10") || !strings.Contains(out, "20") {
+		t.Fatalf("missing primitive values: %s", out)
+	}
+}

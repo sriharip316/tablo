@@ -82,3 +82,88 @@ func TestNormalizeNested(t *testing.T) {
 		t.Fatalf("nested map not normalized: %#v", m["m"])
 	}
 }
+
+func TestDetect_FileExtensionCaseInsensitive(t *testing.T) {
+	data := []byte("a: 1")
+	d := Detector{FilePath: "DATA.YML", Explicit: ""}
+	if got := d.Detect(data); got != YAML {
+		t.Fatalf("want YAML got %v", got)
+	}
+}
+
+func TestDetect_ExplicitInvalidFallsBackToSniff(t *testing.T) {
+	data := []byte(" { \"a\": 1 } ")
+	d := Detector{Explicit: "weird", FilePath: ""}
+	if got := d.Detect(data); got != JSON {
+		t.Fatalf("want JSON sniff got %v", got)
+	}
+}
+
+func TestDetect_SniffJSONWithLeadingSpaces(t *testing.T) {
+	data := []byte("   [1,2,3]")
+	d := Detector{}
+	if got := d.Detect(data); got != JSON {
+		t.Fatalf("want JSON got %v", got)
+	}
+}
+
+func TestParse_InvalidJSON(t *testing.T) {
+	bad := []byte("{\"a\": 1")
+	if _, err := Parse(bad, JSON); err == nil {
+		t.Fatal("expected JSON parse error")
+	}
+}
+
+func TestParse_InvalidYAML(t *testing.T) {
+	bad := []byte("a: [1,2\n")
+	if _, err := Parse(bad, YAML); err == nil {
+		t.Fatal("expected YAML parse error")
+	}
+}
+
+func TestParse_YAMLSkipEmptyDocs(t *testing.T) {
+	yaml := strings.TrimSpace(`
+---
+# comment only
+---
+a: 1
+---
+`)
+	v, err := Parse([]byte(yaml), YAML)
+	if err != nil {
+		t.Fatalf("parse yaml: %v", err)
+	}
+	if _, ok := v.(map[string]any); !ok {
+		t.Fatalf("expected single map, got %T", v)
+	}
+}
+
+func TestParse_InvalidFormat(t *testing.T) {
+	if _, err := Parse([]byte("a: 1"), Format("bogus")); err == nil {
+		t.Fatal("expected invalid format error")
+	} else if err != ErrInvalidFormat {
+		t.Fatalf("expected ErrInvalidFormat got %v", err)
+	}
+}
+
+func TestParse_YAMLMultiDocWithNilDocs(t *testing.T) {
+	yaml := strings.TrimSpace(`
+---
+
+---
+
+---
+b: 2
+`)
+	v, err := Parse([]byte(yaml), YAML)
+	if err != nil {
+		t.Fatalf("parse yaml: %v", err)
+	}
+	m, ok := v.(map[string]any)
+	if !ok {
+		t.Fatalf("expected single map got %T", v)
+	}
+	if m["b"] != 2 {
+		t.Fatalf("unexpected doc content: %#v", m)
+	}
+}
