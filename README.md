@@ -5,10 +5,50 @@ A CLI tool to render JSON/YAML as pretty tables. It can flatten nested objects, 
 ## Install / Build
 
 - Requires Go 1.22+
-- Build locally:
-  - `go build ./cmd/tablo`
-- Or run without installing:
+- Easiest (uses version injection & reproducible flags):
+  - `make build` (outputs `bin/tablo`)
+  - `make install` (installs to `GOBIN`/`GOPATH/bin`)
+- Direct with Go (no Makefile conveniences):
+  - `go build -ldflags "-s -w" ./cmd/tablo`
+- Run without installing:
   - `go run ./cmd/tablo --help`
+- Show version:
+  - `tablo --version`
+
+### Makefile Highlights
+
+The provided `Makefile` supports:
+
+| Task | Command | Notes |
+|------|---------|-------|
+| Build local binary | `make build` | Injects version via `-ldflags -X main.version=...` |
+| Install | `make install` | Same flags as build |
+| Lint | `make lint` | Uses `golangci-lint` if available, else `go vet` |
+| Test | `make test` | Race detector enabled |
+| Coverage | `make cover` / `make cover-html` | Enforces minimum (configurable via `MIN_COVER`) |
+| Multi-platform release | `make release` | Binaries in `dist/` + `sha256sums.txt` |
+| Tag a release | `make VERSION=1.2.3 tag` | Creates & pushes `v1.2.3` |
+| CI pipeline | `make ci` | tidy + lint + test + cover |
+
+### Version Resolution
+
+`tablo --version` reports (in priority order):
+1. Injected build-time value (from `-ldflags -X main.version=...`)
+2. Latest Git tag (`vX.Y.Z`); if workspace dirty: `vX.Y.Z-dirty`
+3. Otherwise a development build: `dev-<short-hash>` (dirty adds `-dirty`)
+4. Final fallback: `dev`
+
+Examples:
+- Tagged clean commit: `v0.3.1`
+- Tagged with uncommitted changes: `v0.3.1-dirty`
+- Untagged clean commit (hash `a1b2c3d`): `dev-a1b2c3d`
+- Untagged dirty: `dev-a1b2c3d-dirty`
+
+To force a version (e.g. during packaging):
+```
+make VERSION=1.4.0 build
+./bin/tablo --version   # -> 1.4.0
+```
 
 ## Quick start
 
@@ -142,3 +182,25 @@ Use dotted path expressions with glob support per segment (`*` and `?`). Example
 - Include: `--select 'user.*.name,meta.id'`
 - Exclude: `--exclude 'debug.*'`
 - Strict mode: `--strict-select` fails if any selected path is missing.
+
+## Versioning & Releases
+
+- Stable releases are tagged with semantic versions: `vMAJOR.MINOR.PATCH`.
+- Binaries built from an exact tag report that tag (e.g., `v0.4.0`).
+- Non-tag builds report a development identifier: `dev-<short-hash>`.
+- A `-dirty` suffix is appended when there are uncommitted changes.
+
+To create a new release:
+```
+# ensure clean working tree and tests pass
+make ci
+# choose next version
+make VERSION=0.5.0 tag
+# build multi-platform artifacts
+make VERSION=0.5.0 release
+```
+
+You can verify the version embedded in a built binary:
+```
+./bin/tablo --version
+```

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -16,7 +18,77 @@ import (
 	"github.com/sriharip316/tablo/internal/selectors"
 )
 
-var version = "0.1.0"
+// version is injected at build time using:
+//
+//	go build -ldflags="-X main.version=v1.2.3"
+//
+// If empty, we attempt to derive it from (in order):
+//  1. The most recent git tag (lightweight or annotated). If the working tree is dirty, suffix "-dirty".
+//  2. The short git commit hash, prefixed as "dev-" and suffixed "-dirty" if the tree is dirty.
+//  3. Final fallback: "dev".
+var version string
+var versionOnce sync.Once
+
+func resolveVersion() string {
+	versionOnce.Do(func() {
+		if version != "" {
+			return
+		}
+		// Prefer latest tag; mark dirty if uncommitted changes exist.
+		if tag, err := gitDescribe(); err == nil && tag != "" {
+			if gitDirty() {
+				version = tag + "-dirty"
+			} else {
+				version = tag
+			}
+			return
+		}
+		// No tag: use dev-<short-hash>[ -dirty ] pattern.
+		if h, err := gitShortHash(); err == nil && h != "" {
+			if gitDirty() {
+				version = "dev-" + h + "-dirty"
+			} else {
+				version = "dev-" + h
+			}
+			return
+		}
+		// Final fallback
+		version = "dev"
+	})
+	return version
+}
+
+func gitDescribe() (string, error) {
+	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
+	cmd.Env = os.Environ()
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	tag := strings.TrimSpace(string(out))
+	return tag, nil
+}
+
+func gitShortHash() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
+	cmd.Env = os.Environ()
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	h := strings.TrimSpace(string(out))
+	return h, nil
+}
+
+func gitDirty() bool {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Env = os.Environ()
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(out)) != ""
+}
 
 type options struct {
 	// input
@@ -83,7 +155,6 @@ func main() {
 			}
 
 			// for YAML multi-docs, Parse already returns []any
-			// build rows/columns
 			var singleObject bool
 
 			switch v := parsed.(type) {
@@ -127,16 +198,12 @@ func main() {
 				}
 				tableModel = render.Model{Mode: render.ModeObjectKV, KV: flat, KVOrder: keys}
 			} else {
-				// array or others
 				switch v := parsed.(type) {
 				case []any:
-					// either array of maps or primitives
 					isObjects := parse.ArrayIsObjects(v)
 					if !isObjects {
-						// primitives
 						tableModel = render.FromPrimitiveArray(v, opts.indexColumn, opts.limit)
 					} else {
-						// objects
 						flatRows := flatten.FlattenRows(v, fopts)
 						inc, exc, selErr := compileSelections(opts)
 						if selErr != nil {
@@ -161,7 +228,6 @@ func main() {
 						tableModel = render.FromFlatRows(flatRows, hdrs, opts.indexColumn)
 					}
 				default:
-					// scalar → same as primitives array of length 1
 					tableModel = render.FromPrimitiveArray([]any{parsed}, opts.indexColumn, opts.limit)
 				}
 			}
@@ -195,7 +261,6 @@ func main() {
 				defer f.Close()
 				w = f
 			}
-			// ensure a trailing newline after the table
 			if !strings.HasSuffix(out, "\n") {
 				out += "\n"
 			}
@@ -241,7 +306,7 @@ func main() {
 	// general
 	root.Flags().BoolVar(&opts.quiet, "quiet", false, "Suppress non-error logging")
 
-	root.Version = version
+	root.Version = resolveVersion()
 	root.SetVersionTemplate("{{.Version}}\n")
 
 	if err := root.Execute(); err != nil {
