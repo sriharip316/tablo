@@ -63,6 +63,31 @@ tablo -f data.json
 echo '{"a":1,"b":2}' | tablo -i -
 ```
 
+## Comment Support
+
+Both JSON and YAML input support comments:
+
+```bash
+# JSON with comments (JSONC format)
+tablo -i '{
+  "name": "test", // Line comment
+  /* Block comment */
+  "value": 42
+}'
+
+# YAML with comments (native support)
+tablo -i '
+# Top-level comment
+name: test  # End of line comment
+value: 42
+'
+
+# JSONC files with .jsonc extension
+tablo -f data.jsonc
+```
+
+Comments are supported across all input methods (inline, file, stdin). Files with `.jsonc` extension are automatically detected as JSON with comments.
+
 ## Examples
 
 ### Flatten a JSON object to key/value pairs

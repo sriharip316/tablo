@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/tidwall/jsonc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,7 +37,7 @@ func (d Detector) Detect(data []byte) Format {
 	}
 	// by extension
 	low := strings.ToLower(d.FilePath)
-	if strings.HasSuffix(low, ".json") {
+	if strings.HasSuffix(low, ".json") || strings.HasSuffix(low, ".jsonc") {
 		return JSON
 	}
 	if strings.HasSuffix(low, ".yaml") || strings.HasSuffix(low, ".yml") {
@@ -47,14 +48,25 @@ func (d Detector) Detect(data []byte) Format {
 	if len(trim) > 0 && (trim[0] == '{' || trim[0] == '[') {
 		return JSON
 	}
+	// Check for JSON with leading comments
+	if len(trim) > 0 && (trim[0] == '/' && len(trim) > 1 && (trim[1] == '/' || trim[1] == '*')) {
+		// Strip comments and check if JSON follows
+		cleanJSON := jsonc.ToJSON(data)
+		cleanTrim := bytes.TrimLeft(cleanJSON, " \t\r\n")
+		if len(cleanTrim) > 0 && (cleanTrim[0] == '{' || cleanTrim[0] == '[') {
+			return JSON
+		}
+	}
 	return YAML
 }
 
 func Parse(data []byte, f Format) (any, error) {
 	switch f {
 	case JSON:
+		// Strip comments from JSON using jsonc library
+		cleanJSON := jsonc.ToJSON(data)
 		var v any
-		dec := json.NewDecoder(bytes.NewReader(data))
+		dec := json.NewDecoder(bytes.NewReader(cleanJSON))
 		dec.UseNumber()
 		if err := dec.Decode(&v); err != nil {
 			// try YAML fallback in auto-like cases

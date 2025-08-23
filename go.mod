@@ -7,6 +7,7 @@ toolchain go1.24.5
 require (
 	github.com/jedib0t/go-pretty/v6 v6.6.8
 	github.com/spf13/cobra v1.9.1
+	github.com/tidwall/jsonc v0.3.2
 	golang.org/x/text v0.28.0
 	gopkg.in/yaml.v3 v3.0.1
 )

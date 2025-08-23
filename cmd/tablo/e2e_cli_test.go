@@ -181,3 +181,135 @@ func TestCLI_PrimitiveArray_IndexColumn(t *testing.T) {
 		t.Fatalf("missing primitive values: %s", out)
 	}
 }
+
+func TestCLI_JSONWithComments_Inline(t *testing.T) {
+	// Test JSON with comments via inline input
+	jsonInput := `{
+		"name": "test", // End of line comment
+		/* Block comment */
+		"value": 42,
+		"data": {
+			"nested": true // Nested comment
+		}
+	}`
+	args := []string{"-i", jsonInput, "--dive", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Verify all fields are parsed correctly despite comments
+	if !strings.Contains(out, "test") || !strings.Contains(out, "42") || !strings.Contains(out, "true") {
+		t.Fatalf("JSON with comments not parsed correctly: %s", out)
+	}
+	if !strings.Contains(out, "data.nested") {
+		t.Fatalf("nested data not flattened: %s", out)
+	}
+}
+
+func TestCLI_JSONWithComments_File(t *testing.T) {
+	// Create a temporary file with JSON comments
+	tmpDir := t.TempDir()
+	jsonFile := filepath.Join(tmpDir, "test.json")
+	jsonContent := `{
+		// This is a test file
+		"project": "tablo",
+		"features": [
+			{
+				"name": "comments", // Feature name
+				"enabled": true
+			}
+		]
+		/* End of file */
+	}`
+	if err := os.WriteFile(jsonFile, []byte(jsonContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{"-f", jsonFile, "--dive", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	if !strings.Contains(out, "tablo") || !strings.Contains(out, "comments") {
+		t.Fatalf("JSON file with comments not parsed correctly: %s", out)
+	}
+}
+
+func TestCLI_YAMLWithComments_Stdin(t *testing.T) {
+	// Test YAML with comments via stdin
+	yamlInput := `# Top level comment
+name: test  # End of line comment
+data:
+  # Nested comment
+  value: 123
+  active: true
+`
+	args := []string{"--format", "yaml", "--dive", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, []byte(yamlInput))
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Verify YAML with comments is parsed correctly
+	if !strings.Contains(out, "test") || !strings.Contains(out, "123") || !strings.Contains(out, "true") {
+		t.Fatalf("YAML with comments not parsed correctly: %s", out)
+	}
+	if !strings.Contains(out, "data.value") || !strings.Contains(out, "data.active") {
+		t.Fatalf("nested YAML data not flattened: %s", out)
+	}
+}
+
+func TestCLI_JSONCommentsArray(t *testing.T) {
+	// Test JSON array with comments
+	jsonArray := `[
+		// First item
+		{"id": 1, "name": "first"},
+		/* Second item */
+		{"id": 2, "name": "second"}
+		// End of array
+	]`
+	args := []string{"-i", jsonArray, "--style", "ascii", "--index-column"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should render as table with 2 rows
+	if !strings.Contains(out, "first") || !strings.Contains(out, "second") {
+		t.Fatalf("JSON array with comments not parsed correctly: %s", out)
+	}
+	// Should have index column
+	if !strings.Contains(out, "| 1 ") || !strings.Contains(out, "| 2 ") {
+		t.Fatalf("index column missing: %s", out)
+	}
+}
+
+func TestCLI_JSONCExtension(t *testing.T) {
+	// Test that .jsonc files are properly detected and parsed as JSON
+	tmpDir := t.TempDir()
+	jsoncFile := filepath.Join(tmpDir, "test.jsonc")
+	jsoncContent := `// Top-level comment
+{
+	"name": "jsonc test",
+	/* Block comment */
+	"features": [
+		{
+			"name": "extension support", // Feature comment
+			"enabled": true
+		}
+	]
+}`
+	if err := os.WriteFile(jsoncFile, []byte(jsoncContent), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{"-f", jsoncFile, "--dive", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	if !strings.Contains(out, "jsonc test") || !strings.Contains(out, "extension support") {
+		t.Fatalf(".jsonc file not parsed correctly: %s", out)
+	}
+	if !strings.Contains(out, "features.0.name") || !strings.Contains(out, "features.0.enabled") {
+		t.Fatalf(".jsonc file not flattened correctly: %s", out)
+	}
+}

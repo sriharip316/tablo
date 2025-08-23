@@ -167,3 +167,184 @@ b: 2
 		t.Fatalf("unexpected doc content: %#v", m)
 	}
 }
+
+func TestParse_JSONWithComments(t *testing.T) {
+	// Test JSON with line comments
+	jsonWithComments := []byte(`{
+		// This is a line comment
+		"name": "test", // End of line comment
+		"age": 30,
+		/* This is a block comment */
+		"active": true,
+		/*
+		 * Multi-line block comment
+		 * with multiple lines
+		 */
+		"data": {
+			"nested": "value" // Nested comment
+		}
+	}`)
+
+	v, err := Parse(jsonWithComments, JSON)
+	if err != nil {
+		t.Fatalf("parse JSON with comments: %v", err)
+	}
+
+	m, ok := v.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map, got %T", v)
+	}
+
+	if m["name"] != "test" {
+		t.Fatalf("expected name=test, got %v", m["name"])
+	}
+	if !reflect.DeepEqual(m["data"], map[string]any{"nested": "value"}) {
+		t.Fatalf("nested data incorrect: %#v", m["data"])
+	}
+}
+
+func TestParse_JSONArrayWithComments(t *testing.T) {
+	jsonArray := []byte(`[
+		// First element
+		{
+			"id": 1,
+			"name": "first" // Name comment
+		},
+		/* Second element */
+		{
+			"id": 2,
+			"name": "second"
+		}
+		// End of array
+	]`)
+
+	v, err := Parse(jsonArray, JSON)
+	if err != nil {
+		t.Fatalf("parse JSON array with comments: %v", err)
+	}
+
+	arr, ok := v.([]any)
+	if !ok {
+		t.Fatalf("expected array, got %T", v)
+	}
+
+	if len(arr) != 2 {
+		t.Fatalf("expected 2 elements, got %d", len(arr))
+	}
+}
+
+func TestParse_YAMLWithComments(t *testing.T) {
+	// YAML already supports comments natively, but let's test to ensure it still works
+	yamlWithComments := []byte(`# Top-level comment
+name: test  # End of line comment
+age: 30
+# Another comment
+data:
+  # Nested comment
+  nested: value
+  # Multi-line
+  # comment block
+  other: data
+`)
+
+	v, err := Parse(yamlWithComments, YAML)
+	if err != nil {
+		t.Fatalf("parse YAML with comments: %v", err)
+	}
+
+	m, ok := v.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map, got %T", v)
+	}
+
+	if m["name"] != "test" {
+		t.Fatalf("expected name=test, got %v", m["name"])
+	}
+	if !reflect.DeepEqual(m["data"], map[string]any{"nested": "value", "other": "data"}) {
+		t.Fatalf("nested data incorrect: %#v", m["data"])
+	}
+}
+
+func TestParse_JSONCommentsInAutoDetect(t *testing.T) {
+	// Test that JSON with comments is properly detected and parsed in auto mode
+	jsonWithComments := []byte(`{
+		// Auto-detect test
+		"format": "json",
+		"comments": true
+	}`)
+
+	// Should be detected as JSON due to opening brace
+	d := Detector{Explicit: "auto"}
+	format := d.Detect(jsonWithComments)
+	if format != JSON {
+		t.Fatalf("expected JSON detection, got %v", format)
+	}
+
+	v, err := Parse(jsonWithComments, format)
+	if err != nil {
+		t.Fatalf("parse auto-detected JSON with comments: %v", err)
+	}
+
+	m, ok := v.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map, got %T", v)
+	}
+
+	if m["format"] != "json" {
+		t.Fatalf("expected format=json, got %v", m["format"])
+	}
+}
+
+func TestDetect_JSONCExtension(t *testing.T) {
+	// Test .jsonc extension is detected as JSON
+	data := []byte(`{"test": "value"}`)
+	d := Detector{FilePath: "test.jsonc", Explicit: ""}
+	if got := d.Detect(data); got != JSON {
+		t.Fatalf("want JSON for .jsonc extension, got %v", got)
+	}
+
+	// Test uppercase .JSONC extension
+	d = Detector{FilePath: "test.JSONC", Explicit: ""}
+	if got := d.Detect(data); got != JSON {
+		t.Fatalf("want JSON for .JSONC extension, got %v", got)
+	}
+}
+
+func TestDetect_LeadingCommentJSON(t *testing.T) {
+	// Test JSON with leading line comment
+	jsonWithLeadingComment := []byte(`// Top-level comment
+{
+  "name": "test",
+  "value": 42
+}`)
+	d := Detector{}
+	if got := d.Detect(jsonWithLeadingComment); got != JSON {
+		t.Fatalf("want JSON for data with leading comment, got %v", got)
+	}
+
+	// Test JSON with leading block comment
+	jsonWithBlockComment := []byte(`/* Block comment
+   spanning multiple lines */
+{"name": "test"}`)
+	if got := d.Detect(jsonWithBlockComment); got != JSON {
+		t.Fatalf("want JSON for data with leading block comment, got %v", got)
+	}
+
+	// Test JSON array with leading comment
+	jsonArrayWithComment := []byte(`// Comment before array
+[1, 2, 3]`)
+	if got := d.Detect(jsonArrayWithComment); got != JSON {
+		t.Fatalf("want JSON for array with leading comment, got %v", got)
+	}
+}
+
+func TestDetect_NonJSONWithComments(t *testing.T) {
+	// Test that comments don't force non-JSON to be detected as JSON
+	yamlLikeWithComment := []byte(`// This looks like a comment
+but this is not valid JSON`)
+	d := Detector{}
+	// Should fall back to YAML since it's not valid JSON even after comment stripping
+	if got := d.Detect(yamlLikeWithComment); got != YAML {
+		t.Fatalf("want YAML for non-JSON with comment, got %v", got)
+	}
+}

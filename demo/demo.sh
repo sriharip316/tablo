@@ -105,6 +105,15 @@ divider
 section "Demo: Piped input"
 demo_cmd "echo '{\"name\":\"Alice\",\"age\":30,\"city\":\"Wonderland\"}' | $TABLO_BIN --style ascii"
 
+section "Demo: JSON with comments support"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/comments.jsonc\" --style ascii --dive --select 'project,features.*.name,meta.license'"
+
+section "Demo: YAML with comments support"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/comments.yaml\" --style ascii --dive --select 'meta.*,config.styles'"
+
+section "Demo: Inline JSON with comments"
+demo_cmd "$TABLO_BIN --input '{\"name\": \"test\", /* comment */ \"value\": 42, \"active\": true}' --style ascii"
+
 divider
 echo -e "\033[1;32mAll demos completed!\033[0m"
 divider
