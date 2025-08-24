@@ -218,6 +218,42 @@ func TestFormatCellBranches(t *testing.T) {
 	}
 }
 
+func TestRenderObjectKV_WithWrapping(t *testing.T) {
+	kv := flatten.FlatKV{"name": "This is a very long text that should be wrapped when the column width is limited", "value": 42}
+	m := Model{Mode: ModeObjectKV, KV: kv}
+
+	// Test word wrapping
+	out, err := Render(m, Options{Style: "ascii", MaxColWidth: 20, WrapMode: "word"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should contain wrapped text across multiple lines
+	if !strings.Contains(out, "This is a very long") {
+		t.Fatalf("expected wrapped text, got: %s", out)
+	}
+	// Should have multiple lines for the long text
+	lines := strings.Split(out, "\n")
+	longValueLines := 0
+	for _, line := range lines {
+		if strings.Contains(line, "text that should be") || strings.Contains(line, "wrapped when the") {
+			longValueLines++
+		}
+	}
+	if longValueLines == 0 {
+		t.Fatalf("expected wrapped lines for long text, got: %s", out)
+	}
+
+	// Test truncation mode
+	outTrunc, err := Render(m, Options{Style: "ascii", MaxColWidth: 20, WrapMode: "off", TruncateSuffix: "..."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should contain truncated text with suffix
+	if !strings.Contains(outTrunc, "...") {
+		t.Fatalf("expected truncated text with suffix, got: %s", outTrunc)
+	}
+}
+
 func TestHeaderCaseAdditional(t *testing.T) {
 	if got := headerCase("Mixed_Case", "lower"); got != "mixed_case" {
 		t.Fatalf("lower headerCase failed: %s", got)

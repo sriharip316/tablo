@@ -92,6 +92,19 @@ func Render(m Model, o Options) (string, error) {
 		} else {
 			t.AppendHeader(toHeaderRow(headers, o))
 		}
+		// column configs for ModeObjectKV
+		colCfgs := make([]table.ColumnConfig, 0, len(headers))
+		for i, h := range headers {
+			cfg := table.ColumnConfig{Name: headerCase(h, o.HeaderCase)}
+			if o.MaxColWidth > 0 {
+				cfg.WidthMax = o.MaxColWidth
+				cfg.WidthMaxEnforcer = wrapEnforcer(o)
+			}
+			cfg.Number = i + 1
+			colCfgs = append(colCfgs, cfg)
+		}
+		t.SetColumnConfigs(colCfgs)
+
 		keys := m.KVOrder
 		if len(keys) == 0 {
 			keys = m.KV.Keys()
