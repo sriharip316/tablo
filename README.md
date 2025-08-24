@@ -229,3 +229,15 @@ You can verify the version embedded in a built binary:
 ```
 ./bin/tablo --version
 ```
+
+## Future Enhancements (Out of Scope for v1)
+
+- Row filtering (e.g., `--where path=value`).
+- Sorting rows by column(s).
+- JSON Lines (NDJSON) streaming mode.
+- CSV/TSV export.
+- Colorization and themes.
+- Custom key ordering configs.
+- JMESPath/JQ-like query language support.
+- Interactive mode for paging large tables.
+- Plugin architecture for custom renderers.
