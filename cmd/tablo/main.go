@@ -1,9 +1,7 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,11 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/sriharip316/tablo/internal/flatten"
-	"github.com/sriharip316/tablo/internal/input"
-	"github.com/sriharip316/tablo/internal/parse"
-	"github.com/sriharip316/tablo/internal/render"
-	"github.com/sriharip316/tablo/internal/selectors"
+	"github.com/sriharip316/tablo/internal/app"
 )
 
 // version is injected at build time using:
@@ -94,6 +88,7 @@ func gitDirty() bool {
 	return strings.TrimSpace(string(out)) != ""
 }
 
+// Legacy options struct for CLI flag binding
 type options struct {
 	// input
 	file   string
@@ -132,6 +127,48 @@ type options struct {
 	quiet bool
 }
 
+// toAppConfig converts CLI options to application configuration
+func (opts *options) toAppConfig() app.Config {
+	return app.Config{
+		Input: app.InputConfig{
+			File:   opts.file,
+			String: opts.inStr,
+			Format: opts.format,
+		},
+		Flatten: app.FlattenConfig{
+			Enabled:            opts.dive,
+			Paths:              opts.divePaths,
+			MaxDepth:           opts.maxDepth,
+			FlattenSimpleArray: opts.flatSimple,
+		},
+		Selection: app.SelectionConfig{
+			SelectExpr:   opts.selectExpr,
+			SelectFile:   opts.selectFile,
+			ExcludeExpr:  opts.exclude,
+			StrictSelect: opts.strictSel,
+		},
+		Output: app.OutputConfig{
+			Style:          opts.style,
+			ASCIIOnly:      opts.asciiOnly,
+			NoHeader:       opts.noHeader,
+			HeaderCase:     opts.headerCase,
+			MaxColWidth:    opts.maxColWidth,
+			WrapMode:       opts.wrap,
+			TruncateSuffix: opts.truncateSuffix,
+			NullStr:        opts.nullStr,
+			BoolStr:        opts.boolStr,
+			Precision:      opts.precision,
+			FilePath:       opts.outputPath,
+			IndexColumn:    opts.indexColumn,
+			Limit:          opts.limit,
+			Color:          opts.color,
+		},
+		General: app.GeneralConfig{
+			Quiet: opts.quiet,
+		},
+	}
+}
+
 func main() {
 	var opts options
 
@@ -139,137 +176,7 @@ func main() {
 		Use:   "tablo",
 		Short: "Render JSON/YAML as tables",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// input precedence checks
-			if opts.inStr != "" && opts.file != "" {
-				return cliErr(2, "conflicting inputs: --input and --file")
-			}
-			// read
-			rdr := input.NewReader(opts.inStr, opts.file, os.Stdin)
-			data, rerr := rdr.Read()
-			if rerr != nil {
-				return cliErr(3, rerr.Error())
-			}
-
-			// detect & parse
-			det := parse.Detector{Explicit: opts.format, FilePath: opts.file}
-			fmtKind := det.Detect(data)
-			parsed, perr := parse.Parse(data, fmtKind)
-			if perr != nil {
-				return cliErr(4, perr.Error())
-			}
-
-			// for YAML multi-docs, Parse already returns []any
-			var singleObject bool
-
-			switch v := parsed.(type) {
-			case []any:
-				_ = v
-			case map[string]any:
-				singleObject = true
-			case map[any]any:
-				singleObject = true
-				v2 := parse.ToStringKeyMap(v)
-				parsed = v2
-			default:
-				vrows := []any{v}
-				parsed = vrows
-			}
-
-			// flatten if requested
-			fopts := flatten.Options{
-				Enabled:            opts.dive || len(opts.divePaths) > 0,
-				MaxDepth:           opts.maxDepth,
-				DivePaths:          opts.divePaths,
-				FlattenSimpleArray: opts.flatSimple,
-			}
-
-			var tableModel render.Model
-
-			if singleObject {
-				// object → key/value table
-				flat := flatten.FlattenObject(parsed, fopts)
-				// selection on keys
-				inc, exc, selErr := compileSelections(opts)
-				if selErr != nil {
-					return cliErr(2, selErr.Error())
-				}
-				keys := selectors.ApplyToKeys(flat.Keys(), inc, exc)
-				if opts.strictSel {
-					missing := selectors.MissingExpressions(keys, inc)
-					if len(missing) > 0 {
-						return cliErr(5, "missing selected paths: "+strings.Join(missing, ", "))
-					}
-				}
-				tableModel = render.Model{Mode: render.ModeObjectKV, KV: flat, KVOrder: keys}
-			} else {
-				switch v := parsed.(type) {
-				case []any:
-					isObjects := parse.ArrayIsObjects(v)
-					if !isObjects {
-						tableModel = render.FromPrimitiveArray(v, opts.indexColumn, opts.limit)
-					} else {
-						flatRows := flatten.FlattenRows(v, fopts)
-						inc, exc, selErr := compileSelections(opts)
-						if selErr != nil {
-							return cliErr(2, selErr.Error())
-						}
-						hdrs := selectors.HeadersUnion(flatRows)
-						if len(inc) > 0 {
-							hdrs = selectors.ApplyToKeys(hdrs, inc, nil)
-						}
-						if len(exc) > 0 {
-							hdrs = selectors.ApplyToKeys(hdrs, nil, exc)
-						}
-						if opts.strictSel && len(inc) > 0 {
-							missing := selectors.MissingExpressions(hdrs, inc)
-							if len(missing) > 0 {
-								return cliErr(5, "missing selected paths: "+strings.Join(missing, ", "))
-							}
-						}
-						if opts.limit > 0 && len(flatRows) > opts.limit {
-							flatRows = flatRows[:opts.limit]
-						}
-						tableModel = render.FromFlatRows(flatRows, hdrs, opts.indexColumn)
-					}
-				default:
-					tableModel = render.FromPrimitiveArray([]any{parsed}, opts.indexColumn, opts.limit)
-				}
-			}
-
-			// render
-			ro := render.Options{
-				Style:          opts.style,
-				ASCIIOnly:      opts.asciiOnly,
-				NoHeader:       opts.noHeader,
-				HeaderCase:     opts.headerCase,
-				MaxColWidth:    opts.maxColWidth,
-				WrapMode:       opts.wrap,
-				TruncateSuffix: opts.truncateSuffix,
-				NullStr:        opts.nullStr,
-				BoolStr:        opts.boolStr,
-				Precision:      opts.precision,
-				Color:          opts.color,
-			}
-			out, rerr := render.Render(tableModel, ro)
-			if rerr != nil {
-				return cliErr(2, rerr.Error())
-			}
-
-			// write output
-			var w io.Writer = os.Stdout
-			if opts.outputPath != "" {
-				f, ferr := os.Create(opts.outputPath)
-				if ferr != nil {
-					return cliErr(4, ferr.Error())
-				}
-				defer f.Close()
-				w = f
-			}
-			if !strings.HasSuffix(out, "\n") {
-				out += "\n"
-			}
-			_, _ = io.WriteString(w, out)
-			return nil
+			return runApp(&opts)
 		},
 	}
 
@@ -314,70 +221,24 @@ func main() {
 	root.SetVersionTemplate("{{.Version}}\n")
 
 	if err := root.Execute(); err != nil {
-		var ce *cliError
-		if errors.As(err, &ce) {
-			if !opts.quiet {
-				_, _ = fmt.Fprintln(os.Stderr, ce.msg)
-			}
-			os.Exit(ce.code)
-		}
-		if !opts.quiet {
-			_, _ = fmt.Fprintln(os.Stderr, err.Error())
-		}
-		os.Exit(1)
+		handleError(err, opts.quiet)
 	}
 }
 
-func compileSelections(opts options) (include []selectors.Expr, exclude []selectors.Expr, err error) {
-	var inc []string
-	if opts.selectExpr != "" {
-		inc = append(inc, splitComma(opts.selectExpr)...)
-	}
-	if opts.selectFile != "" {
-		b, rerr := os.ReadFile(opts.selectFile)
-		if rerr != nil {
-			return nil, nil, rerr
-		}
-		for _, line := range strings.Split(string(b), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			inc = append(inc, line)
-		}
-	}
-	var exc []string
-	if opts.exclude != "" {
-		exc = append(exc, splitComma(opts.exclude)...)
-	}
-	incx, ierr := selectors.CompileMany(inc)
-	if ierr != nil {
-		return nil, nil, ierr
-	}
-	excx, eerr := selectors.CompileMany(exc)
-	if eerr != nil {
-		return nil, nil, eerr
-	}
-	return incx, excx, nil
+// runApp executes the main application logic
+func runApp(opts *options) error {
+	config := opts.toAppConfig()
+	application := app.New(config, os.Stdin)
+	return application.Run()
 }
 
-func splitComma(s string) []string {
-	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
+// handleError processes application errors and exits with appropriate codes
+func handleError(err error, quiet bool) {
+	exitCode := app.GetExitCode(err)
+
+	if !quiet {
+		_, _ = fmt.Fprintln(os.Stderr, err.Error())
 	}
-	return out
+
+	os.Exit(exitCode)
 }
-
-type cliError struct {
-	code int
-	msg  string
-}
-
-func (e *cliError) Error() string { return e.msg }
-
-func cliErr(code int, msg string) error { return &cliError{code: code, msg: msg} }

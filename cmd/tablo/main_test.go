@@ -1,46 +1,69 @@
 package main
 
 import (
-	"os"
 	"strings"
 	"testing"
+
+	"github.com/sriharip316/tablo/internal/app"
 )
 
-func TestSplitComma(t *testing.T) {
-	got := splitComma(" a, b ,, c ")
-	if len(got) != 3 || got[0] != "a" || got[1] != "b" || got[2] != "c" {
-		t.Fatalf("unexpected: %v", got)
+func TestOptionsToAppConfig(t *testing.T) {
+	opts := &options{
+		file:   "test.json",
+		inStr:  `{"a": 1}`,
+		format: "json",
+		dive:   true,
+		style:  "ascii",
+		quiet:  true,
+	}
+
+	config := opts.toAppConfig()
+
+	if config.Input.File != "test.json" {
+		t.Errorf("expected file to be test.json, got %s", config.Input.File)
+	}
+	if config.Input.String != `{"a": 1}` {
+		t.Errorf("expected string to be {\"a\": 1}, got %s", config.Input.String)
+	}
+	if config.Input.Format != "json" {
+		t.Errorf("expected format to be json, got %s", config.Input.Format)
+	}
+	if !config.Flatten.Enabled {
+		t.Error("expected flatten to be enabled")
+	}
+	if config.Output.Style != "ascii" {
+		t.Errorf("expected style to be ascii, got %s", config.Output.Style)
+	}
+	if !config.General.Quiet {
+		t.Error("expected quiet to be true")
 	}
 }
 
-func TestCompileSelections_FileAndExpr(t *testing.T) {
-	f, err := os.CreateTemp(t.TempDir(), "sel-*.txt")
-	if err != nil {
-		t.Fatal(err)
+func TestHandleError(t *testing.T) {
+	// Test that error handling works with different error types
+	usageErr := app.NewUsageError("test usage error")
+	exitCode := app.GetExitCode(usageErr)
+	if exitCode != 2 {
+		t.Errorf("expected exit code 2 for usage error, got %d", exitCode)
 	}
-	defer f.Close()
-	_, _ = f.WriteString("# comment\n a.* \n x \n")
-	opts := options{selectExpr: "b.c", selectFile: f.Name()}
-	inc, exc, err := compileSelections(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(inc) != 3 || len(exc) != 0 {
-		t.Fatalf("inc=%d exc=%d", len(inc), len(exc))
+
+	inputErr := app.NewInputError("test input error", nil)
+	exitCode = app.GetExitCode(inputErr)
+	if exitCode != 3 {
+		t.Errorf("expected exit code 3 for input error, got %d", exitCode)
 	}
 }
 
-func TestMainConflictingInputs(t *testing.T) {
-	// Execute root command via cobra is complex; here we just ensure CLI error type works
-	e := cliErr(7, "boom")
-	if e.Error() != "boom" {
-		t.Fatal("bad error")
+func TestResolveVersionFunctionality(t *testing.T) {
+	// Test that version resolution works
+	version := resolveVersion()
+	if version == "" {
+		t.Error("version should not be empty")
 	}
 }
 
 func TestEnsureTrailingNewline(t *testing.T) {
-	// exercise a small piece of main: ensure newline logic using chooseRender via markdown
-	// Not invoking cobra; just check Render behavior already covered elsewhere
+	// Test basic string manipulation logic
 	s := "hello"
 	if !strings.HasSuffix(s+"\n", "\n") {
 		t.Fatal("expected suffix")
