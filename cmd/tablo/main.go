@@ -3,9 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -15,78 +12,7 @@ import (
 // version is injected at build time using:
 //
 //	go build -ldflags="-X main.version=v1.2.3"
-//
-// If empty, we attempt to derive it from (in order):
-//  1. The most recent git tag (lightweight or annotated). If the working tree is dirty, suffix "-dirty".
-//  2. The short git commit hash, prefixed as "dev-" and suffixed "-dirty" if the tree is dirty.
-//  3. Final fallback: "dev".
-var version string
-var versionOnce sync.Once
-
-// execCommand is a variable that holds the os/exec.Command function.
-// It is exposed for testing purposes to allow mocking of external command execution.
-var execCommand = exec.Command
-
-func resolveVersion() string {
-	versionOnce.Do(func() {
-		if version != "" {
-			return
-		}
-		// Prefer latest tag; mark dirty if uncommitted changes exist.
-		if tag, err := gitDescribe(); err == nil && tag != "" {
-			if gitDirty() {
-				version = tag + "-dirty"
-			} else {
-				version = tag
-			}
-			return
-		}
-		// No tag: use dev-<short-hash>[ -dirty ] pattern.
-		if h, err := gitShortHash(); err == nil && h != "" {
-			if gitDirty() {
-				version = "dev-" + h + "-dirty"
-			} else {
-				version = "dev-" + h
-			}
-			return
-		}
-		// Final fallback
-		version = "dev"
-	})
-	return version
-}
-
-func gitDescribe() (string, error) {
-	cmd := execCommand("git", "describe", "--tags", "--abbrev=0")
-	cmd.Env = os.Environ()
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	tag := strings.TrimSpace(string(out))
-	return tag, nil
-}
-
-func gitShortHash() (string, error) {
-	cmd := execCommand("git", "rev-parse", "--short", "HEAD")
-	cmd.Env = os.Environ()
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	h := strings.TrimSpace(string(out))
-	return h, nil
-}
-
-func gitDirty() bool {
-	cmd := execCommand("git", "status", "--porcelain")
-	cmd.Env = os.Environ()
-	out, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return strings.TrimSpace(string(out)) != ""
-}
+var version string = "dev"
 
 // Legacy options struct for CLI flag binding
 type options struct {
@@ -173,8 +99,9 @@ func main() {
 	var opts options
 
 	root := &cobra.Command{
-		Use:   "tablo",
-		Short: "Render JSON/YAML as tables",
+		Use:     "tablo",
+		Version: version,
+		Short:   "Render JSON/YAML as tables",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runApp(&opts)
 		},
@@ -217,7 +144,6 @@ func main() {
 	// general
 	root.Flags().BoolVar(&opts.quiet, "quiet", false, "Suppress non-error logging")
 
-	root.Version = resolveVersion()
 	root.SetVersionTemplate("{{.Version}}\n")
 
 	if err := root.Execute(); err != nil {

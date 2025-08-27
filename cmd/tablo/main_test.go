@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/sriharip316/tablo/internal/app"
@@ -51,21 +50,5 @@ func TestHandleError(t *testing.T) {
 	exitCode = app.GetExitCode(inputErr)
 	if exitCode != 3 {
 		t.Errorf("expected exit code 3 for input error, got %d", exitCode)
-	}
-}
-
-func TestResolveVersionFunctionality(t *testing.T) {
-	// Test that version resolution works
-	version := resolveVersion()
-	if version == "" {
-		t.Error("version should not be empty")
-	}
-}
-
-func TestEnsureTrailingNewline(t *testing.T) {
-	// Test basic string manipulation logic
-	s := "hello"
-	if !strings.HasSuffix(s+"\n", "\n") {
-		t.Fatal("expected suffix")
 	}
 }

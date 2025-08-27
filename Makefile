@@ -1,15 +1,20 @@
 # Makefile for tablo CLI
 SHELL := /bin/bash
 
-# Derive version: if latest git tag (v*) exists use it; else use dev-<short-hash>; final fallback 'dev'. Override: make VERSION=... build
-VERSION ?= $(shell (git describe --tags --abbrev=0 2>/dev/null || (h=$$(git rev-parse --short HEAD 2>/dev/null) && echo dev-$$h) || echo dev))
-TAG_NAME := $(if $(filter v%,$(VERSION)),$(VERSION),v$(VERSION))
+TAG ?= $(shell git describe --tags --exact-match 2>/dev/null)
+COMMIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null)
+
+# Append "-dirty" to the version if there are uncommitted changes
+DIRTY = $(shell test -z "$$(git status --porcelain 2>/dev/null)" && echo "" || echo "-dirty")
+
+# Derive version: if TAG is not empty use it; else use dev-<COMMIT_HASH>; final fallback 'dev'.
+VERSION = $(if $(TAG),$(TAG)$(DIRTY),$(if $(COMMIT_HASH),dev-$(COMMIT_HASH)$(DIRTY),dev))
 MIN_COVER ?= 70.0
-OS_ARCHES = linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
-BINARY = tablo
-BIN_DIR = bin
-DIST_DIR = dist
-PKG = ./cmd/tablo
+OS_ARCHES := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+BINARY := tablo
+BIN_DIR := bin
+DIST_DIR := dist
+PKG := ./cmd/tablo
 
 # Default target
 .PHONY: help
@@ -64,6 +69,7 @@ cover: ## Run tests with coverage profile (text summary)
 	go test -race -covermode=atomic -coverprofile=coverage.out ./...
 	@go tool cover -func=coverage.out | tee coverage.func.txt
 	@total=$$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $$3}' | sed 's/%//'); \
+	  total=$${total:-0}; \
 	  awk 'BEGIN { if ('"$$total"' < $(MIN_COVER)) { printf "Coverage %.2f%% is below MIN_COVER=%.2f%%\n", '"$$total"', $(MIN_COVER); exit 1 } else { printf "Coverage %.2f%% (min %.2f%%) OK\n", '"$$total"', $(MIN_COVER) } }'
 
 .PHONY: cover-html
@@ -78,8 +84,14 @@ clean: ## Remove build artifacts
 .PHONY: dist-clean
 dist-clean: clean ## Alias for clean (legacy)
 
+.PHONY: release-check
+release-check: ## Validate git state before release (not DIRTY, TAG not empty, TAG exists)
+	@test -z "$(DIRTY)" || (echo "Working tree is dirty"; exit 1)
+	@if [ -z "$(TAG)" ]; then echo "No git tag found for current commit; cannot release"; exit 1; fi
+	@if ! git rev-parse "$(TAG)" >/dev/null 2>&1; then echo "Tag $(TAG) does not exist"; exit 1; fi
+
 .PHONY: release
-release: ## Build release archives for multiple OS/ARCH into dist/
+release: release-check ## Build release archives for multiple OS/ARCH into dist/
 	@echo "Building release artifacts for version $(VERSION)"
 	@mkdir -p $(DIST_DIR)
 	@rm -f $(DIST_DIR)/sha256sums.txt
@@ -96,16 +108,13 @@ release: ## Build release archives for multiple OS/ARCH into dist/
 	@echo "Artifacts in $(DIST_DIR)/"
 	@echo "SHA256 sums:"; cat $(DIST_DIR)/sha256sums.txt
 
-.PHONY: release-check
-release-check: ## Validate git state before tagging (no uncommitted changes, tag unused)
-	@test -z "$$(git status --porcelain)" || (echo "Working tree not clean"; git status --short; exit 1)
-	@if git rev-parse "$(TAG_NAME)" >/dev/null 2>&1; then echo "Tag $(TAG_NAME) already exists"; exit 1; fi
-	@echo "Git state OK for version $(VERSION)"
-
 .PHONY: tag
-tag: release-check ## Create and push git tag $(TAG_NAME)
-	git tag -a "$(TAG_NAME)" -m "Release $(VERSION)"
-	git push origin "$(TAG_NAME)"
+tag: ## Create and push git tag $(TAG)
+	@test -z "$(DIRTY)" || (echo "Working tree is dirty"; exit 1)
+	@if [ -z "$(TAG)" ]; then echo "TAG is empty"; exit 1; fi
+	@if git rev-parse "$(TAG)" >/dev/null 2>&1; then echo "Tag $(TAG) already exists"; exit 1; fi
+	git tag -a "$(TAG)" -m "Release $(VERSION)"
+	git push origin "$(TAG)"
 
 .PHONY: print-version
 print-version: ## Print detected version
