@@ -247,7 +247,7 @@ echo -e "\033[1;35m2. Mixed Data Types\033[0m"
 demo_cmd "$TABLO_BIN --input '[{\"a\":1,\"b\":\"text\"},{\"a\":true,\"b\":null},{\"a\":3.14,\"b\":[1,2,3]}]' --dive --flatten-simple-arrays"
 
 echo -e "\033[1;35m3. Unicode and Special Characters\033[0m"
-demo_cmd "$TABLO_BIN --input '{\"emoji\":\"🌟⭐✨\",\"unicode\":\"测试тестप्रीक्षा\",\"special\":\"!@#$%^&*()\"}'"
+demo_cmd "$TABLO_BIN --input '{\"emoji\":\"🌟⭐✨\",\"unicode\":\"ಅ भा ௶ ¥ тест 测\",\"special\":\"!@#$%^&*()\"}'"
 
 echo -e "\033[1;35m4. Large Numbers and Precision\033[0m"
 demo_cmd "$TABLO_BIN --input '{\"big\":123456789.123456789,\"small\":0.000123456}' --precision 3"
