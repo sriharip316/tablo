@@ -194,6 +194,11 @@ func (app *Application) processArray(arr []any, flattenOpts flatten.Options) (re
 		return render.FromPrimitiveArray(arr, app.config.Output.IndexColumn, app.config.Output.Limit), nil
 	}
 
+	// If limit is 1, treat it as single object
+	if app.config.Output.Limit == 1 {
+		return app.processObject(arr[0].(map[string]any), flattenOpts)
+	}
+
 	// Process array of objects
 	flatRows := flatten.FlattenRows(arr, flattenOpts)
 
