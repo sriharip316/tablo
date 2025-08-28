@@ -17,18 +17,26 @@ A CLI tool to render JSON/YAML as pretty tables. It can flatten nested objects, 
 
 ### Makefile Highlights
 
-The provided `Makefile` supports:
+The provided `Makefile` supports many targets. Run `make help` to see all available commands with descriptions.
 
-| Task                   | Command                          | Notes                                              |
-| ---------------------- | -------------------------------- | -------------------------------------------------- |
-| Build local binary     | `make build`                     | Injects version via `-ldflags -X main.version=...` |
-| Install                | `make install`                   | Same flags as build                                |
-| Lint                   | `make lint`                      | Uses `golangci-lint` if available, else `go vet`   |
-| Test                   | `make test`                      | Race detector enabled                              |
-| Coverage               | `make cover` / `make cover-html` | Enforces minimum (configurable via `MIN_COVER`)    |
-| Multi-platform release | `make release`                   | Binaries in `dist/` + `sha256sums.txt`             |
-| Tag a release          | `make VERSION=1.2.3 tag`         | Creates & pushes `v1.2.3`                          |
-| CI pipeline            | `make ci`                        | tidy + lint + test + cover                         |
+Key targets include:
+
+| Task                   | Command                          | Notes                                                                   |
+| ---------------------- | -------------------------------- | ----------------------------------------------------------------------- |
+| Show help              | `make help`                      | Lists all available targets with descriptions                           |
+| Build local binary     | `make build`                     | Injects version via `-ldflags -X main.version=...`                      |
+| Install                | `make install`                   | Install binary into GOPATH/bin (or GOBIN)                               |
+| Run with help          | `make run`                       | Build and run the CLI with --help                                       |
+| Tidy dependencies      | `make tidy`                      | Run go mod tidy and verify no drift                                     |
+| Lint                   | `make lint`                      | Uses `golangci-lint` if available, else `go vet`/`gofmt`/`staticcheck`  |
+| Test                   | `make test`                      | Race detector enabled with `-count=1`                                   |
+| Coverage               | `make cover` / `make cover-html` | Enforces minimum coverage (default 70.0%, configurable via `MIN_COVER`) |
+| Clean artifacts        | `make clean`                     | Remove build artifacts from `bin/`, `dist/`, coverage files             |
+| Print version          | `make print-version`             | Show detected version string                                            |
+| Release validation     | `make release-check`             | Validate git state before release                                       |
+| Multi-platform release | `make release`                   | Binaries in `dist/` + `sha256sums.txt`                                  |
+| Tag a release          | `make TAG=v1.2.3 tag`            | Creates & pushes git tag                                                |
+| CI pipeline            | `make ci`                        | tidy + lint + test + cover                                              |
 
 ### Version Resolution
 
@@ -45,13 +53,6 @@ Examples:
 - Tagged with uncommitted changes: `v0.3.1-dirty`
 - Untagged clean commit (hash `a1b2c3d`): `dev-a1b2c3d`
 - Untagged dirty: `dev-a1b2c3d-dirty`
-
-To force a version (e.g. during packaging):
-
-```
-make VERSION=1.4.0 build
-./bin/tablo --version   # -> 1.4.0
-```
 
 ## Quick start
 
@@ -268,11 +269,18 @@ To create a new release:
 ```
 # ensure clean working tree and tests pass
 make ci
-# choose next version
-make VERSION=0.5.0 tag
-# build multi-platform artifacts
-make VERSION=0.5.0 release
+# choose next version and create tag
+make TAG=v0.5.0 tag
+# build multi-platform artifacts (automatically detects version from tag)
+make release
 ```
+
+The release process:
+
+- `make tag` validates the working tree is clean and creates/pushes the git tag
+- `make release` runs `release-check` to validate git state and builds for multiple platforms
+- Release artifacts are built for: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64
+- All binaries are placed in `dist/` with a `sha256sums.txt` file
 
 You can verify the version embedded in a built binary:
 
