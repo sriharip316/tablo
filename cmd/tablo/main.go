@@ -44,7 +44,7 @@ func main() {
 	root.Flags().BoolVar(&config.Selection.StrictSelect, "strict-select", false, "Error when any selected path does not exist")
 
 	// output formatting
-	root.Flags().StringVar(&config.Output.Style, "style", "heavy", "Table style: heavy|light|double|ascii|markdown|compact|borderless")
+	root.Flags().StringVar(&config.Output.Style, "style", "heavy", "Table style: heavy|light|double|ascii|markdown|compact|borderless|html|csv")
 	root.Flags().BoolVar(&config.Output.ASCIIOnly, "ascii", false, "Force ASCII borders")
 	root.Flags().BoolVar(&config.Output.NoHeader, "no-header", false, "Omit header row")
 	root.Flags().StringVar(&config.Output.HeaderCase, "header-case", "original", "Header case: original|upper|lower|title")

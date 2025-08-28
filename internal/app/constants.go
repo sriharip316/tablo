@@ -36,6 +36,8 @@ const (
 	StyleMarkdown   = "markdown"
 	StyleCompact    = "compact"
 	StyleBorderless = "borderless"
+	StyleHTML       = "html"
+	StyleCSV        = "csv"
 )
 
 // Format constants

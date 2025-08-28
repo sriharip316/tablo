@@ -1,6 +1,6 @@
 # tablo
 
-A CLI tool to render JSON/YAML as pretty tables. It can flatten nested objects, select columns, format booleans/floats, and output in multiple styles (heavy/light/double/ascii/markdown).
+A CLI tool to render JSON/YAML as pretty tables. It can flatten nested objects, select columns, format booleans/floats, and output in multiple styles (heavy/light/double/ascii/markdown/html/csv).
 
 ## Install / Build
 
@@ -19,32 +19,35 @@ A CLI tool to render JSON/YAML as pretty tables. It can flatten nested objects, 
 
 The provided `Makefile` supports:
 
-| Task | Command | Notes |
-|------|---------|-------|
-| Build local binary | `make build` | Injects version via `-ldflags -X main.version=...` |
-| Install | `make install` | Same flags as build |
-| Lint | `make lint` | Uses `golangci-lint` if available, else `go vet` |
-| Test | `make test` | Race detector enabled |
-| Coverage | `make cover` / `make cover-html` | Enforces minimum (configurable via `MIN_COVER`) |
-| Multi-platform release | `make release` | Binaries in `dist/` + `sha256sums.txt` |
-| Tag a release | `make VERSION=1.2.3 tag` | Creates & pushes `v1.2.3` |
-| CI pipeline | `make ci` | tidy + lint + test + cover |
+| Task                   | Command                          | Notes                                              |
+| ---------------------- | -------------------------------- | -------------------------------------------------- |
+| Build local binary     | `make build`                     | Injects version via `-ldflags -X main.version=...` |
+| Install                | `make install`                   | Same flags as build                                |
+| Lint                   | `make lint`                      | Uses `golangci-lint` if available, else `go vet`   |
+| Test                   | `make test`                      | Race detector enabled                              |
+| Coverage               | `make cover` / `make cover-html` | Enforces minimum (configurable via `MIN_COVER`)    |
+| Multi-platform release | `make release`                   | Binaries in `dist/` + `sha256sums.txt`             |
+| Tag a release          | `make VERSION=1.2.3 tag`         | Creates & pushes `v1.2.3`                          |
+| CI pipeline            | `make ci`                        | tidy + lint + test + cover                         |
 
 ### Version Resolution
 
 `tablo --version` reports (in priority order):
+
 1. Injected build-time value (from `-ldflags -X main.version=...`)
 2. Latest Git tag (`vX.Y.Z`); if workspace dirty: `vX.Y.Z-dirty`
 3. Otherwise a development build: `dev-<short-hash>` (dirty adds `-dirty`)
 4. Final fallback: `dev`
 
 Examples:
+
 - Tagged clean commit: `v0.3.1`
 - Tagged with uncommitted changes: `v0.3.1-dirty`
 - Untagged clean commit (hash `a1b2c3d`): `dev-a1b2c3d`
 - Untagged dirty: `dev-a1b2c3d-dirty`
 
 To force a version (e.g. during packaging):
+
 ```
 make VERSION=1.4.0 build
 ./bin/tablo --version   # -> 1.4.0
@@ -162,6 +165,51 @@ Output:
 | 3     |
 ```
 
+### CSV and HTML output
+
+Export data as CSV for spreadsheet applications:
+
+```bash
+tablo -i '[{"name":"John","age":30},{"name":"Jane","age":25}]' --style csv
+```
+
+Output:
+
+```
+age,name
+30,John
+25,Jane
+```
+
+Generate HTML tables for web applications:
+
+```bash
+echo '{"user":"admin","active":true}' | tablo --dive --style html
+```
+
+Output:
+
+```html
+<table class="go-pretty-table">
+  <thead>
+    <tr>
+      <th>KEY</th>
+      <th>VALUE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>active</td>
+      <td>true</td>
+    </tr>
+    <tr>
+      <td>user</td>
+      <td>admin</td>
+    </tr>
+  </tbody>
+</table>
+```
+
 ### Formatting options (booleans, precision, null)
 
 When rendering rows, you can customize formatting:
@@ -197,8 +245,8 @@ Output:
 
 Choose a table style with `--style`:
 
-- `heavy` (default), `light`, `double`, `ascii`, `markdown`, `compact`, `borderless`.
-- Force ASCII borders with `--ascii`.
+- `heavy` (default), `light`, `double`, `ascii`, `markdown`, `compact`, `borderless`, `html`, `csv`.
+- Force ASCII borders with `--ascii` (applies to table styles only).
 
 ## Selecting/excluding columns
 
@@ -216,6 +264,7 @@ Use dotted path expressions with glob support per segment (`*` and `?`). Example
 - A `-dirty` suffix is appended when there are uncommitted changes.
 
 To create a new release:
+
 ```
 # ensure clean working tree and tests pass
 make ci
@@ -226,6 +275,7 @@ make VERSION=0.5.0 release
 ```
 
 You can verify the version embedded in a built binary:
+
 ```
 ./bin/tablo --version
 ```

@@ -52,6 +52,46 @@ func TestRender_PrimitiveArrayLimit(t *testing.T) {
 	}
 }
 
+func TestRender_HTMLOutput(t *testing.T) {
+	kv := flatten.FlatKV{"name": "John", "age": 30}
+	m := Model{Mode: ModeObjectKV, KV: kv}
+	out, err := Render(m, Options{Style: "html"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Check that HTML tags are present
+	if !strings.Contains(out, "<table") || !strings.Contains(out, "</table>") {
+		t.Fatalf("expected HTML table tags in output: %q", out)
+	}
+	if !strings.Contains(out, "<th>") || !strings.Contains(out, "<td>") {
+		t.Fatalf("expected HTML th/td tags in output: %q", out)
+	}
+}
+
+func TestRender_CSVOutput(t *testing.T) {
+	rows := []flatten.FlatKV{{"name": "John", "age": 30}, {"name": "Jane", "age": 25}}
+	m := FromFlatRows(rows, []string{"name", "age"}, false)
+	out, err := Render(m, Options{Style: "csv"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Check that CSV format is present (comma-separated values)
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("expected at least header and one data row in CSV output: %q", out)
+	}
+	// Check header line contains comma-separated values
+	if !strings.Contains(lines[0], ",") {
+		t.Fatalf("expected comma-separated header in CSV output: %q", lines[0])
+	}
+	// Check data lines contain comma-separated values
+	for i := 1; i < len(lines); i++ {
+		if !strings.Contains(lines[i], ",") {
+			t.Fatalf("expected comma-separated data in CSV output line %d: %q", i, lines[i])
+		}
+	}
+}
+
 func TestHeaderCase(t *testing.T) {
 	if headerCase("hello_world", "title") != "Hello World" {
 		t.Fatalf("title case failed")
@@ -139,6 +179,18 @@ func TestResolveStyleVariants(t *testing.T) {
 	sMarkdown := resolveStyle(Options{Style: "markdown"})
 	if sMarkdown.Name != table.StyleDefault.Name {
 		t.Fatalf("markdown base style mismatch")
+	}
+
+	// html (should use default base)
+	sHTML := resolveStyle(Options{Style: "html"})
+	if sHTML.Name != table.StyleDefault.Name {
+		t.Fatalf("html base style mismatch")
+	}
+
+	// csv (should use default base)
+	sCSV := resolveStyle(Options{Style: "csv"})
+	if sCSV.Name != table.StyleDefault.Name {
+		t.Fatalf("csv base style mismatch")
 	}
 
 	// compact -> StyleLight w/ SeparateRows disabled

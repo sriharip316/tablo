@@ -177,6 +177,10 @@ func chooseRender(t table.Writer, o Options) string {
 	switch strings.ToLower(o.Style) {
 	case "markdown":
 		return t.RenderMarkdown()
+	case "html":
+		return t.RenderHTML()
+	case "csv":
+		return t.RenderCSV()
 	default:
 		return t.Render()
 	}
@@ -196,6 +200,12 @@ func resolveStyle(o Options) table.Style {
 		s = table.StyleDefault
 	case "markdown":
 		// style doesn't matter; choose simple
+		s = table.StyleDefault
+	case "html":
+		// style doesn't matter for HTML output; choose simple
+		s = table.StyleDefault
+	case "csv":
+		// style doesn't matter for CSV output; choose simple
 		s = table.StyleDefault
 	case "compact":
 		s = table.StyleLight

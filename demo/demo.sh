@@ -124,6 +124,12 @@ for style in heavy light double ascii markdown compact borderless; do
     echo
 done
 
+echo -e "\033[1;35m1a. HTML Output (--style html)\033[0m"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/list.json\" --style html --limit 2"
+
+echo -e "\033[1;35m1b. CSV Output (--style csv)\033[0m"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/list.json\" --style csv --limit 2"
+
 echo -e "\033[1;35m2. ASCII Only Mode (--ascii)\033[0m"
 demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/list.json\" --style heavy --ascii --limit 1"
 
@@ -233,6 +239,21 @@ demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/single.json\" --dive --flatten-simple-ar
 echo -e "\033[1;35m5. Pipeline Processing Example\033[0m"
 demo_cmd "echo '[{\"name\":\"John\",\"scores\":[95,87,92]},{\"name\":\"Jane\",\"scores\":[88,94,90]}]' | $TABLO_BIN --dive --flatten-simple-arrays --style ascii --header-case title --index-column"
 
+echo -e "\033[1;35m6. HTML Output with Formatting\033[0m"
+demo_cmd "$TABLO_BIN --input '[{\"name\":\"Alice\",\"score\":95.123,\"active\":true},{\"name\":\"Bob\",\"score\":87.456,\"active\":false}]' --style html --precision 1 --bool-str 'Yes:No' --index-column"
+
+echo -e "\033[1;35m7. CSV Export with Precision and Boolean Formatting\033[0m"
+demo_cmd "$TABLO_BIN --input '[{\"product\":\"Laptop\",\"price\":999.99,\"in_stock\":true},{\"product\":\"Mouse\",\"price\":19.95,\"in_stock\":false}]' --style csv --precision 2 --bool-str 'Available:Out of Stock'"
+
+echo -e "\033[1;35m8. CSV Output with Flattened Nested Data\033[0m"
+demo_cmd "$TABLO_BIN --input '{\"company\":{\"name\":\"TechCorp\",\"employees\":[{\"name\":\"Alice\",\"role\":\"Engineer\"},{\"name\":\"Bob\",\"role\":\"Manager\"}]}}' --dive --style csv"
+
+echo -e "\033[1;35m9. HTML Output with Custom Null Strings\033[0m"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/list.json\" --dive --style html --null-str 'N/A' --select 'id,name,misc' --limit 2"
+
+echo -e "\033[1;35m10. CSV Output without Headers\033[0m"
+demo_cmd "$TABLO_BIN --input '[{\"city\":\"New York\",\"population\":8400000},{\"city\":\"Los Angeles\",\"population\":3900000}]' --style csv --no-header"
+
 # =============================================================================
 # EDGE CASES AND ERROR HANDLING
 # =============================================================================
@@ -258,11 +279,12 @@ echo -e "\033[1;36mSummary of demonstrated features:\033[0m"
 echo "📥 Input: --file, --input, --format, stdin, JSON/YAML with comments"
 echo "🏗️ Flattening: --dive, --dive-path, --max-depth, --flatten-simple-arrays"
 echo "🎯 Selection: --select, --select-file, --exclude, --strict-select"
-echo "🎨 Formatting: --style (7 styles), --ascii, --no-header, --header-case"
+echo "🎨 Formatting: --style (9 styles including html/csv), --ascii, --no-header, --header-case"
 echo "📏 Layout: --max-col-width, --wrap, --truncate-suffix"
 echo "🔧 Data: --null-str, --bool-str, --precision"
 echo "📤 Output: --output, --index-column, --limit, --color"
 echo "⚙️ General: --quiet, --version, --help"
+echo "✨ New: HTML and CSV output formats for web and spreadsheet integration"
 echo ""
 echo "For more information, run: $TABLO_BIN --help"
 divider

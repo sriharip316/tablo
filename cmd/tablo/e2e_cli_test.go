@@ -313,3 +313,42 @@ func TestCLI_JSONCExtension(t *testing.T) {
 		t.Fatalf(".jsonc file not flattened correctly: %s", out)
 	}
 }
+
+func TestCLI_HTMLOutput(t *testing.T) {
+	jsonInput := `{"name": "John", "age": 30}`
+	args := []string{"-i", jsonInput, "--dive", "--style", "html"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Verify HTML output format
+	if !strings.Contains(out, "<table") || !strings.Contains(out, "</table>") {
+		t.Fatalf("expected HTML table tags, got: %s", out)
+	}
+	if !strings.Contains(out, "<th>") || !strings.Contains(out, "<td>") {
+		t.Fatalf("expected HTML th/td tags, got: %s", out)
+	}
+}
+
+func TestCLI_CSVOutput(t *testing.T) {
+	jsonInput := `[{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]`
+	args := []string{"-i", jsonInput, "--style", "csv"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Verify CSV output format
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("expected at least header and one data row in CSV output: %s", out)
+	}
+	// Check for comma-separated values
+	if !strings.Contains(lines[0], ",") {
+		t.Fatalf("expected comma-separated header in CSV output: %s", lines[0])
+	}
+	for i := 1; i < len(lines); i++ {
+		if !strings.Contains(lines[i], ",") {
+			t.Fatalf("expected comma-separated data in CSV output line %d: %s", i, lines[i])
+		}
+	}
+}
