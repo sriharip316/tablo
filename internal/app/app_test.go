@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -316,5 +318,199 @@ func TestIsSpace(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("isSpace(%q): got %v, want %v", tc.char, result, tc.expected)
 		}
+	}
+}
+
+func TestRun_NoInput_Error(t *testing.T) {
+	// No input string, no file, and nil stdin should error at readInput()
+	app := New(Config{}, nil)
+	err := app.Run()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	var ae *AppError
+	if !AsAppError(err, &ae) || ae.Code != ErrCodeInput {
+		t.Fatalf("expected input error, got: %#v", err)
+	}
+	if !strings.Contains(ae.Message, "failed to read input") {
+		t.Errorf("unexpected message: %s", ae.Message)
+	}
+}
+
+func TestRun_ParseError_JSON(t *testing.T) {
+	cfg := Config{Input: InputConfig{String: "{\"a\": }", Format: "json"}}
+	app := New(cfg, nil)
+	err := app.Run()
+	var ae *AppError
+	if !AsAppError(err, &ae) || ae.Code != ErrCodeParse {
+		t.Fatalf("expected parse error, got: %#v", err)
+	}
+}
+
+func TestRun_ProcessError_StrictSelectMissing(t *testing.T) {
+	cfg := Config{
+		Input:     InputConfig{String: `{"name":"n"}`, Format: "json"},
+		Selection: SelectionConfig{SelectExpr: "missing", StrictSelect: true},
+		Output:    OutputConfig{Style: "ascii"},
+	}
+	app := New(cfg, nil)
+	err := app.Run()
+	var ae *AppError
+	if !AsAppError(err, &ae) || ae.Code != ErrCodeProcessing {
+		t.Fatalf("expected processing error, got: %#v", err)
+	}
+	// Ensure original selection error message bubbles in chain for visibility
+	if ae.Cause == nil {
+		t.Fatalf("expected wrapped cause error, got nil")
+	}
+}
+
+func TestRun_WriteOutput_Error(t *testing.T) {
+	// Use a path whose parent directory does not exist -> os.Create should fail with ENOENT
+	impossiblePath := filepath.Join("/this/path/should/not/exist", "tablo_out.txt")
+	cfg := Config{
+		Input:  InputConfig{String: `{"k":1}`, Format: "json"},
+		Output: OutputConfig{FilePath: impossiblePath},
+	}
+	app := New(cfg, nil)
+	err := app.Run()
+	var ae *AppError
+	if !AsAppError(err, &ae) || ae.Code != ErrCodeOutput {
+		t.Fatalf("expected output error, got: %#v", err)
+	}
+}
+
+func TestProcessArray_LimitOne_AsObject(t *testing.T) {
+	app := New(Config{Output: OutputConfig{Limit: 1}}, nil)
+	arr := []any{
+		map[string]any{"a": 1, "b": 2},
+		map[string]any{"a": 3, "c": 4},
+	}
+	model, err := app.processArray(arr, flatten.Options{Enabled: false})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if model.Mode != 1 { // ModeObjectKV
+		t.Fatalf("expected object KV mode, got %v", model.Mode)
+	}
+}
+
+func TestProcessData_Primitive(t *testing.T) {
+	app := New(Config{}, nil)
+	m, err := app.processData(123)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if m.Mode != 0 { // ModeRows
+		t.Fatalf("expected ModeRows for primitive, got %v", m.Mode)
+	}
+	if len(m.Rows) != 1 || len(m.Rows[0]) != 1 || m.Rows[0][0] != 123 {
+		t.Fatalf("unexpected model rows: %+v", m.Rows)
+	}
+}
+
+func TestCompileSelectors_WithFileAndExclude(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "selectors.txt")
+	content := "# comment\n\n name \n age \n# another\naddress.*\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write temp selectors file: %v", err)
+	}
+
+	cfg := Config{
+		Selection: SelectionConfig{
+			SelectExpr:  "city",
+			SelectFile:  path,
+			ExcludeExpr: "age",
+		},
+	}
+	app := New(cfg, nil)
+
+	keys := []string{"name", "age", "city", "address.street"}
+	filtered, err := app.applySelection(keys)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	joined := strings.Join(filtered, ",")
+	// Expect order: includes in order of include-exprs across input order.
+	// From file: name, age, address.* (age excluded). From expr: city.
+	// So expected roughly: name, city, address.street
+	if !strings.Contains(joined, "name") || !strings.Contains(joined, "city") || !strings.Contains(joined, "address.street") {
+		t.Fatalf("unexpected filtered keys: %v", filtered)
+	}
+	for _, k := range filtered {
+		if k == "age" {
+			t.Fatalf("exclude did not apply; got %v", filtered)
+		}
+	}
+}
+
+func TestReadSelectFile_Basic(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "sel.txt")
+	data := "\n# comment\n name \n \n# c2\nfoo.bar\n"
+	if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+		t.Fatalf("failed to write selectors: %v", err)
+	}
+	app := New(Config{Selection: SelectionConfig{SelectFile: path}}, nil)
+	got, err := app.readSelectFile()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 || got[0] != "name" || got[1] != "foo.bar" {
+		t.Fatalf("unexpected patterns: %v", got)
+	}
+}
+
+func TestReadSelectFile_Error(t *testing.T) {
+	app := New(Config{Selection: SelectionConfig{SelectFile: filepath.Join("/nope", "missing.txt")}}, nil)
+	_, err := app.readSelectFile()
+	if err == nil {
+		t.Fatal("expected error for missing file, got nil")
+	}
+}
+
+func TestWriteOutput_ToFile_AppendsNewline(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.txt")
+	app := New(Config{Output: OutputConfig{FilePath: path}}, nil)
+	if err := app.writeOutput("hello"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read written file: %v", err)
+	}
+	if string(b) != "hello\n" {
+		t.Fatalf("unexpected file content: %q", string(b))
+	}
+}
+
+func TestSplitLines(t *testing.T) {
+	// empty
+	if res := splitLines(""); res != nil {
+		t.Fatalf("expected nil for empty, got %v", res)
+	}
+	// multi-line
+	res := splitLines("a\nb\nc")
+	if len(res) != 3 || res[0] != "a" || res[2] != "c" {
+		t.Fatalf("unexpected split result: %v", res)
+	}
+}
+
+func TestNormalizeData_NoChangeForArrayAndMap(t *testing.T) {
+	app := New(Config{}, nil)
+	arr := []any{1, 2}
+	if got := app.normalizeData(arr); got == nil {
+		t.Fatal("unexpected nil")
+	} else if _, ok := got.([]any); !ok {
+		t.Fatalf("expected []any, got %T", got)
+	}
+	m := map[string]any{"a": 1}
+	if got := app.normalizeData(m); got == nil {
+		t.Fatal("unexpected nil")
+	} else if _, ok := got.(map[string]any); !ok {
+		t.Fatalf("expected map[string]any, got %T", got)
 	}
 }
