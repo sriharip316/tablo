@@ -4,7 +4,7 @@ A CLI tool to render JSON/YAML as pretty tables. It can flatten nested objects, 
 
 ## Install / Build
 
-- Requires Go 1.22+
+- Requires Go 1.23+
 - Easiest (uses version injection & reproducible flags):
   - `make build` (outputs `bin/tablo`)
   - `make install` (installs to `GOBIN`/`GOPATH/bin`)
