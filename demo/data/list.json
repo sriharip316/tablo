@@ -1,0 +1,41 @@
+[
+  {
+    "id": 123,
+    "name": "Test Object One",
+    "settings": {
+      "theme": "dark",
+      "notifications": {
+        "email": false,
+        "sms": true
+      }
+    },
+    "items": [
+      { "type": "A", "value": 10 },
+      { "type": "B", "value": 20 }
+    ]
+  },
+  {
+    "id": 124,
+    "name": "Test Object Two",
+    "settings": {
+      "theme": "light",
+      "notifications": {
+        "email": true,
+        "sms": false
+      }
+    },
+    "items": [{ "type": "C", "value": 30 }]
+  },
+  {
+    "id": 125,
+    "name": "Test Object Three",
+    "settings": {
+      "theme": "blue",
+      "notifications": {
+        "email": false,
+        "sms": false
+      }
+    },
+    "items": []
+  }
+]

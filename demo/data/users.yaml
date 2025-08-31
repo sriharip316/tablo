@@ -1,0 +1,79 @@
+- id: 1
+  name: Alice Johnson
+  age: 28
+  email: alice@example.com
+  active: true
+  score: 95.5
+  department: Engineering
+  salary: 75000
+  city: New York
+
+- id: 2
+  name: Bob Smith
+  age: 34
+  email: bob@example.com
+  active: false
+  score: 87.2
+  department: Marketing
+  salary: 65000
+  city: San Francisco
+
+- id: 3
+  name: Carol Davis
+  age: 29
+  email: carol@example.com
+  active: true
+  score: 92.8
+  department: Engineering
+  salary: 80000
+  city: Seattle
+
+- id: 4
+  name: David Wilson
+  age: 42
+  email: david@example.com
+  active: true
+  score: 78.9
+  department: Sales
+  salary: 70000
+  city: Austin
+
+- id: 5
+  name: Eve Brown
+  age: 26
+  email: eve@example.com
+  active: false
+  score: 89.1
+  department: Design
+  salary: 60000
+  city: Portland
+
+- id: 6
+  name: Frank Miller
+  age: 38
+  email: frank@example.com
+  active: true
+  score: 83.7
+  department: Engineering
+  salary: 85000
+  city: Boston
+
+- id: 7
+  name: Grace Lee
+  age: 31
+  email: grace@example.com
+  active: true
+  score: 96.3
+  department: Marketing
+  salary: 72000
+  city: Chicago
+
+- id: 8
+  name: Henry Taylor
+  age: 45
+  email: henry@example.com
+  active: false
+  score: 74.5
+  department: Sales
+  salary: 68000
+  city: Miami

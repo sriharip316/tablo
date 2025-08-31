@@ -1,7 +1,7 @@
 {
   "id": 123,
   "name": "Test Object",
-  "description": "This is a long description field intended to test handling of large text values in JSON. It contains multiple sentences, special characters like !@#$%^&*(), and even some unicode: 測試, тест, prueba. The purpose is to ensure that systems parsing this JSON can handle lengthy strings without truncation or errors. This description should be long enough to cover edge cases in text processing, including line breaks.\nHere is a new line for good measure.",
+  "description": "This is a description.",
   "active": true,
   "meta": {
     "created": "2024-06-01T12:00:00Z",

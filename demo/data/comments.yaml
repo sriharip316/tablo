@@ -1,32 +1,30 @@
 # This is a YAML file with comments to demonstrate comment support
 project: tablo
-description: A CLI tool to render JSON/YAML as tables  # End of line comment
+description: A CLI tool to render JSON/YAML as tables # End of line comment
 
 # Multi-line comment block
 # describing the features array
 features:
-  - name: JSON parsing  # Feature 1
-    supported: true
-  - name: YAML parsing  # Feature 2
+  - name: YAML parsing # Feature 2
     supported: true
   # Comment before next feature
-  - name: Comment support  # This feature!
+  - name: Comment support # This feature!
     supported: true
-    formats:  # Supported formats
+    formats: # Supported formats
       - json
       - yaml
 
 # Configuration section
 config:
   styles:
-    - heavy    # Default style
+    - heavy # Default style
     - light
-    - ascii    # Simple ASCII borders
+    - ascii # Simple ASCII borders
     - markdown
   # Output options
   output:
-    file: null      # Default to stdout
-    format: table   # Always table format
+    file: null # Default to stdout
+    format: table # Always table format
 
 # Metadata
 meta:

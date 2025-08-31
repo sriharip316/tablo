@@ -13,10 +13,6 @@
       "name": "JSON parsing", // Feature 1
       "supported": true,
     },
-    {
-      "name": "YAML parsing", // Feature 2
-      "supported": true,
-    },
     // Comment before next feature
     {
       "name": "Comment support", // This feature!

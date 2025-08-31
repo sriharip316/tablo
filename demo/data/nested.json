@@ -1,0 +1,295 @@
+{
+  "company": {
+    "name": "TechCorp International",
+    "founded": 1995,
+    "headquarters": {
+      "address": {
+        "street": "123 Innovation Drive",
+        "city": "San Francisco",
+        "state": "CA",
+        "zipcode": "94105",
+        "country": "USA"
+      },
+      "coordinates": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      }
+    },
+    "departments": [
+      {
+        "name": "Engineering",
+        "head": {
+          "name": "Sarah Chen",
+          "title": "VP of Engineering",
+          "contact": {
+            "email": "sarah.chen@techcorp.com",
+            "phone": "+1-555-0101",
+            "slack": "@sarah.chen"
+          },
+          "experience": {
+            "years": 12,
+            "previous_companies": ["Google", "Microsoft", "Stripe"]
+          }
+        },
+        "teams": [
+          {
+            "name": "Backend",
+            "lead": "John Smith",
+            "technologies": ["Go", "Python", "PostgreSQL", "Redis"],
+            "projects": [
+              {
+                "name": "API Gateway",
+                "status": "active",
+                "timeline": {
+                  "start": "2023-01-15",
+                  "end": "2023-12-31"
+                },
+                "team_members": 5,
+                "budget": 500000
+              },
+              {
+                "name": "Microservices Migration",
+                "status": "planning",
+                "timeline": {
+                  "start": "2024-01-01",
+                  "end": "2024-06-30"
+                },
+                "team_members": 8,
+                "budget": 750000
+              }
+            ]
+          },
+          {
+            "name": "Frontend",
+            "lead": "Emma Wilson",
+            "technologies": ["React", "TypeScript", "Tailwind CSS", "Next.js"],
+            "projects": [
+              {
+                "name": "Customer Portal",
+                "status": "completed",
+                "timeline": {
+                  "start": "2022-10-01",
+                  "end": "2023-03-15"
+                },
+                "team_members": 4,
+                "budget": 300000
+              },
+              {
+                "name": "Mobile App",
+                "status": "active",
+                "timeline": {
+                  "start": "2023-06-01",
+                  "end": "2024-02-29"
+                },
+                "team_members": 6,
+                "budget": 600000
+              }
+            ]
+          }
+        ],
+        "metrics": {
+          "total_employees": 45,
+          "average_salary": 125000,
+          "satisfaction_score": 4.7,
+          "retention_rate": 0.92
+        }
+      },
+      {
+        "name": "Sales",
+        "head": {
+          "name": "Michael Rodriguez",
+          "title": "VP of Sales",
+          "contact": {
+            "email": "michael.rodriguez@techcorp.com",
+            "phone": "+1-555-0102",
+            "slack": "@michael.rodriguez"
+          },
+          "experience": {
+            "years": 15,
+            "previous_companies": ["Salesforce", "Oracle", "HubSpot"]
+          }
+        },
+        "regions": [
+          {
+            "name": "North America",
+            "manager": "Lisa Johnson",
+            "territories": {
+              "US": {
+                "quota": 10000000,
+                "actual": 8500000,
+                "performance": 0.85
+              },
+              "Canada": {
+                "quota": 2000000,
+                "actual": 2200000,
+                "performance": 1.1
+              }
+            },
+            "top_deals": [
+              {
+                "client": "Enterprise Corp",
+                "value": 500000,
+                "stage": "closed-won",
+                "close_date": "2023-09-15"
+              },
+              {
+                "client": "Global Industries",
+                "value": 750000,
+                "stage": "negotiation",
+                "expected_close": "2023-12-01"
+              }
+            ]
+          },
+          {
+            "name": "Europe",
+            "manager": "Pierre Dubois",
+            "territories": {
+              "UK": {
+                "quota": 3000000,
+                "actual": 2800000,
+                "performance": 0.93
+              },
+              "Germany": {
+                "quota": 4000000,
+                "actual": 4200000,
+                "performance": 1.05
+              },
+              "France": {
+                "quota": 2500000,
+                "actual": 2300000,
+                "performance": 0.92
+              }
+            },
+            "top_deals": [
+              {
+                "client": "EuroTech Ltd",
+                "value": 600000,
+                "stage": "proposal",
+                "expected_close": "2023-11-30"
+              },
+              {
+                "client": "German Manufacturing",
+                "value": 900000,
+                "stage": "closed-won",
+                "close_date": "2023-08-22"
+              }
+            ]
+          }
+        ],
+        "metrics": {
+          "total_employees": 28,
+          "average_salary": 95000,
+          "satisfaction_score": 4.3,
+          "retention_rate": 0.88
+        }
+      }
+    ],
+    "financial": {
+      "revenue": {
+        "2021": 15000000,
+        "2022": 22000000,
+        "2023": 31000000
+      },
+      "expenses": {
+        "2021": {
+          "salaries": 8000000,
+          "infrastructure": 2000000,
+          "marketing": 1500000,
+          "other": 1000000
+        },
+        "2022": {
+          "salaries": 12000000,
+          "infrastructure": 3000000,
+          "marketing": 2500000,
+          "other": 1800000
+        },
+        "2023": {
+          "salaries": 18000000,
+          "infrastructure": 4200000,
+          "marketing": 3500000,
+          "other": 2300000
+        }
+      },
+      "funding": {
+        "rounds": [
+          {
+            "series": "Seed",
+            "amount": 2000000,
+            "date": "2020-03-15",
+            "investors": ["Angel Fund", "Tech Accelerator"]
+          },
+          {
+            "series": "Series A",
+            "amount": 10000000,
+            "date": "2021-09-22",
+            "investors": ["Venture Capital Partners", "Growth Fund"]
+          },
+          {
+            "series": "Series B",
+            "amount": 25000000,
+            "date": "2023-02-10",
+            "investors": [
+              "Major VC",
+              "Strategic Investor",
+              "International Fund"
+            ]
+          }
+        ],
+        "total_raised": 37000000,
+        "valuation": 150000000
+      }
+    },
+    "technology": {
+      "infrastructure": {
+        "cloud_provider": "AWS",
+        "regions": ["us-west-2", "us-east-1", "eu-west-1", "ap-southeast-1"],
+        "services": {
+          "compute": {
+            "ec2_instances": 45,
+            "lambda_functions": 120,
+            "ecs_clusters": 8
+          },
+          "storage": {
+            "s3_buckets": 25,
+            "ebs_volumes": 60,
+            "total_storage_tb": 50
+          },
+          "database": {
+            "rds_instances": 8,
+            "dynamodb_tables": 15,
+            "redis_clusters": 3
+          }
+        },
+        "monitoring": {
+          "tools": ["CloudWatch", "DataDog", "Sentry"],
+          "metrics": {
+            "uptime": 99.95,
+            "avg_response_time_ms": 150,
+            "error_rate": 0.001
+          }
+        }
+      },
+      "security": {
+        "compliance": ["SOC2", "GDPR", "HIPAA"],
+        "tools": {
+          "identity": "Okta",
+          "secrets": "AWS Secrets Manager",
+          "scanning": "Snyk",
+          "monitoring": "Splunk"
+        },
+        "policies": {
+          "password_policy": {
+            "min_length": 12,
+            "require_symbols": true,
+            "require_numbers": true,
+            "max_age_days": 90
+          },
+          "access_review": {
+            "frequency": "quarterly",
+            "automated": true
+          }
+        }
+      }
+    }
+  }
+}
