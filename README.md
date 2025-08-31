@@ -211,6 +211,36 @@ Output:
 </table>
 ```
 
+### Row filtering
+
+Filter rows using the `--where` flag with condition expressions:
+
+- `--where 'name=John'` - equality comparison
+- `--where 'age>25'` - numeric comparison (`>`, `>=`, `<`, `<=`)
+- `--where 'active=true'` - boolean comparison
+- `--where 'name~pattern'` - string contains (`~` for contains, `!~` for not contains)
+- `--where 'email=~.*@example\.com'` - regex matching (`=~` for match, `!=~` for not match)
+
+Multiple `--where` flags use AND logic. Works with flattened paths when using `--dive`.
+
+Example:
+
+```bash
+tablo -f employees.json --where 'department=Engineering' --where 'salary>75000' --select 'name,salary'
+```
+
+Output:
+
+```
+┏━━━━━━━━━┳━━━━━━━━┓
+┃ name    ┃ salary ┃
+┣━━━━━━━━━╋━━━━━━━━┫
+┃ Bob     ┃ 85000  ┃
+┃ Charlie ┃ 80000  ┃
+┃ Frank   ┃ 90000  ┃
+┗━━━━━━━━━┻━━━━━━━━┛
+```
+
 ### Formatting options (booleans, precision, null)
 
 When rendering rows, you can customize formatting:
@@ -290,7 +320,7 @@ You can verify the version embedded in a built binary:
 
 ## Future Enhancements (Out of Scope for v1)
 
-- Row filtering (e.g., `--where path=value`).
+
 - Sorting rows by column(s).
 - JSON Lines (NDJSON) streaming mode.
 - Colorization and themes.

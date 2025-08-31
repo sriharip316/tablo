@@ -352,3 +352,149 @@ func TestCLI_CSVOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestCLI_FilteringBasic(t *testing.T) {
+	// Test basic filtering with equality
+	jsonInput := `[{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]`
+	args := []string{"-i", jsonInput, "--where", "name=John", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should only contain John's row
+	if !strings.Contains(out, "John") || strings.Contains(out, "Jane") {
+		t.Fatalf("filter name=John failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringNumeric(t *testing.T) {
+	// Test numeric comparison filtering
+	jsonInput := `[{"name": "John", "age": 30}, {"name": "Jane", "age": 25}, {"name": "Bob", "age": 35}]`
+	args := []string{"-i", jsonInput, "--where", "age>30", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should only contain Bob's row (age 35)
+	if !strings.Contains(out, "Bob") || strings.Contains(out, "John") || strings.Contains(out, "Jane") {
+		t.Fatalf("filter age>30 failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringBoolean(t *testing.T) {
+	// Test boolean filtering
+	jsonInput := `[{"name": "John", "active": true}, {"name": "Jane", "active": false}]`
+	args := []string{"-i", jsonInput, "--where", "active=true", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should only contain John's row
+	if !strings.Contains(out, "John") || strings.Contains(out, "Jane") {
+		t.Fatalf("filter active=true failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringMultiple(t *testing.T) {
+	// Test multiple filter conditions (AND logic)
+	jsonInput := `[{"name": "John", "age": 30, "active": true}, {"name": "Jane", "age": 25, "active": false}, {"name": "Bob", "age": 35, "active": true}]`
+	args := []string{"-i", jsonInput, "--where", "active=true", "--where", "age>=30", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should contain John and Bob (both active=true and age>=30)
+	if !strings.Contains(out, "John") || !strings.Contains(out, "Bob") || strings.Contains(out, "Jane") {
+		t.Fatalf("multiple filters failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringContains(t *testing.T) {
+	// Test string contains filtering
+	jsonInput := `[{"name": "Johnson", "city": "NYC"}, {"name": "Jane", "city": "LA"}, {"name": "Bob", "city": "Boston"}]`
+	args := []string{"-i", jsonInput, "--where", "name~o", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should contain Johnson and Bob (both have 'o' in name)
+	if !strings.Contains(out, "Johnson") || !strings.Contains(out, "Bob") || strings.Contains(out, "Jane") {
+		t.Fatalf("filter name~o failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringRegex(t *testing.T) {
+	// Test regex filtering
+	jsonInput := `[{"email": "john@example.com"}, {"email": "jane@test.org"}, {"email": "bob@example.net"}]`
+	args := []string{"-i", jsonInput, "--where", "email=~.*@example\\.(com|net)", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should contain john@example.com and bob@example.net
+	if !strings.Contains(out, "john@example.com") || !strings.Contains(out, "bob@example.net") || strings.Contains(out, "jane@test.org") {
+		t.Fatalf("regex filter failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringWithFlattening(t *testing.T) {
+	// Test filtering with nested data (flattening)
+	jsonInput := `[{"user": {"name": "John", "profile": {"age": 30}}, "active": true}, {"user": {"name": "Jane", "profile": {"age": 25}}, "active": false}]`
+	args := []string{"-i", jsonInput, "--dive", "--where", "user.profile.age>25", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should only contain John's row (age 30 > 25)
+	if !strings.Contains(out, "John") || strings.Contains(out, "Jane") {
+		t.Fatalf("filter with flattening failed: %s", out)
+	}
+}
+
+func TestCLI_FilteringWithSelection(t *testing.T) {
+	// Test filtering combined with column selection
+	jsonInput := `[{"name": "John", "age": 30, "city": "NYC", "active": true}, {"name": "Jane", "age": 25, "city": "LA", "active": false}]`
+	args := []string{"-i", jsonInput, "--where", "active=true", "--select", "name,age", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should contain only John's row and only name, age columns
+	if !strings.Contains(out, "John") || !strings.Contains(out, "30") || strings.Contains(out, "Jane") {
+		t.Fatalf("filter with selection failed: %s", out)
+	}
+	if strings.Contains(out, "NYC") || strings.Contains(out, "active") {
+		t.Fatalf("column selection failed with filtering: %s", out)
+	}
+}
+
+func TestCLI_FilteringInvalidExpression(t *testing.T) {
+	// Test error handling for invalid filter expressions
+	jsonInput := `[{"name": "John", "age": 30}]`
+	args := []string{"-i", jsonInput, "--where", "invalid_expression", "--style", "ascii"}
+	_, errOut, code, _ := runCLI(t, args, nil)
+	if code == 0 {
+		t.Fatalf("expected non-zero exit code for invalid filter expression")
+	}
+	if !strings.Contains(errOut, "invalid filter condition") || !strings.Contains(errOut, "no valid operator found") {
+		t.Fatalf("expected specific error message, got: %s", errOut)
+	}
+}
+
+func TestCLI_FilteringNoMatches(t *testing.T) {
+	// Test filtering that matches no rows
+	jsonInput := `[{"name": "John", "age": 30}, {"name": "Jane", "age": 25}]`
+	args := []string{"-i", jsonInput, "--where", "age>50", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should have no data rows
+	if strings.Contains(out, "John") || strings.Contains(out, "Jane") || strings.Contains(out, "30") || strings.Contains(out, "25") {
+		t.Fatalf("filter should match no rows: %s", out)
+	}
+	// When no rows match, output should be empty (this is expected behavior)
+	if strings.TrimSpace(out) != "" {
+		t.Fatalf("expected empty output when no rows match, got: %s", out)
+	}
+}

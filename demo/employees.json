@@ -1,0 +1,10 @@
+[
+  {"name": "John", "age": 30, "department": "Engineering", "salary": 75000, "active": true, "email": "john@company.com"},
+  {"name": "Jane", "age": 25, "department": "Marketing", "salary": 65000, "active": true, "email": "jane@company.com"},
+  {"name": "Bob", "age": 35, "department": "Engineering", "salary": 85000, "active": false, "email": "bob@company.com"},
+  {"name": "Alice", "age": 28, "department": "Sales", "salary": 70000, "active": true, "email": "alice@company.com"},
+  {"name": "Charlie", "age": 32, "department": "Engineering", "salary": 80000, "active": true, "email": "charlie@company.com"},
+  {"name": "Diana", "age": 29, "department": "Marketing", "salary": 68000, "active": true, "email": "diana@company.com"},
+  {"name": "Eve", "age": 27, "department": "Sales", "salary": 72000, "active": false, "email": "eve@company.com"},
+  {"name": "Frank", "age": 33, "department": "Engineering", "salary": 90000, "active": true, "email": "frank@company.com"}
+]

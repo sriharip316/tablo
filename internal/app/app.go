@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/sriharip316/tablo/internal/filter"
 	"github.com/sriharip316/tablo/internal/flatten"
 	"github.com/sriharip316/tablo/internal/input"
 	"github.com/sriharip316/tablo/internal/parse"
@@ -16,6 +17,7 @@ type Config struct {
 	Input     InputConfig
 	Flatten   FlattenConfig
 	Selection SelectionConfig
+	Filter    FilterConfig
 	Output    OutputConfig
 	General   GeneralConfig
 }
@@ -38,6 +40,10 @@ type SelectionConfig struct {
 	SelectFile   string
 	ExcludeExpr  string
 	StrictSelect bool
+}
+
+type FilterConfig struct {
+	WhereExprs []string
 }
 
 type OutputConfig struct {
@@ -202,13 +208,19 @@ func (app *Application) processArray(arr []any, flattenOpts flatten.Options) (re
 	// Process array of objects
 	flatRows := flatten.FlattenRows(arr, flattenOpts)
 
-	// Apply limit early if specified
-	if app.config.Output.Limit > 0 && len(flatRows) > app.config.Output.Limit {
-		flatRows = flatRows[:app.config.Output.Limit]
+	// Apply row filtering
+	filteredRows, err := app.applyRowFiltering(flatRows)
+	if err != nil {
+		return render.Model{}, err
+	}
+
+	// Apply limit after filtering
+	if app.config.Output.Limit > 0 && len(filteredRows) > app.config.Output.Limit {
+		filteredRows = filteredRows[:app.config.Output.Limit]
 	}
 
 	// Get union of headers
-	headers := selectors.HeadersUnion(flatRows)
+	headers := selectors.HeadersUnion(filteredRows)
 
 	// Apply selection
 	filteredHeaders, err := app.applySelection(headers)
@@ -216,7 +228,7 @@ func (app *Application) processArray(arr []any, flattenOpts flatten.Options) (re
 		return render.Model{}, err
 	}
 
-	return render.FromFlatRows(flatRows, filteredHeaders, app.config.Output.IndexColumn), nil
+	return render.FromFlatRows(filteredRows, filteredHeaders, app.config.Output.IndexColumn), nil
 }
 
 func (app *Application) applySelection(keys []string) ([]string, error) {
@@ -304,6 +316,20 @@ func (app *Application) renderOutput(model render.Model) (string, error) {
 	}
 
 	return render.Render(model, opts)
+}
+
+func (app *Application) applyRowFiltering(rows []flatten.FlatKV) ([]flatten.FlatKV, error) {
+	if len(app.config.Filter.WhereExprs) == 0 {
+		return rows, nil
+	}
+
+	conditions, err := filter.ParseConditions(app.config.Filter.WhereExprs)
+	if err != nil {
+		return nil, NewError(ErrCodeUsage, "invalid filter condition", err)
+	}
+
+	rowFilter := filter.NewFilter(conditions)
+	return rowFilter.Apply(rows), nil
 }
 
 func (app *Application) writeOutput(output string) error {

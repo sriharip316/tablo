@@ -446,6 +446,129 @@ func TestCompileSelectors_WithFileAndExclude(t *testing.T) {
 	}
 }
 
+func TestApplication_ApplyRowFiltering(t *testing.T) {
+	tests := []struct {
+		name        string
+		whereExprs  []string
+		inputData   string
+		wantCount   int
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:       "no filters",
+			whereExprs: []string{},
+			inputData:  `[{"name":"John","age":30},{"name":"Jane","age":25}]`,
+			wantCount:  2,
+		},
+		{
+			name:       "equality filter",
+			whereExprs: []string{"name=John"},
+			inputData:  `[{"name":"John","age":30},{"name":"Jane","age":25}]`,
+			wantCount:  1,
+		},
+		{
+			name:       "numeric filter",
+			whereExprs: []string{"age>25"},
+			inputData:  `[{"name":"John","age":30},{"name":"Jane","age":25}]`,
+			wantCount:  1,
+		},
+		{
+			name:       "multiple filters (AND)",
+			whereExprs: []string{"age>=25", "name!=John"},
+			inputData:  `[{"name":"John","age":30},{"name":"Jane","age":25},{"name":"Bob","age":20}]`,
+			wantCount:  1,
+		},
+		{
+			name:        "invalid filter",
+			whereExprs:  []string{"invalid_expr"},
+			inputData:   `[{"name":"John","age":30}]`,
+			wantErr:     true,
+			errContains: "invalid filter condition",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := Config{
+				Filter: FilterConfig{
+					WhereExprs: tt.whereExprs,
+				},
+			}
+
+			application := New(config, strings.NewReader(tt.inputData))
+			err := application.Run()
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error but got none")
+					return
+				}
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("error = %v, want error containing %q", err, tt.errContains)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestApplication_FilteringWithFlattening(t *testing.T) {
+	input := `[
+		{"user":{"name":"John","profile":{"age":30}},"active":true},
+		{"user":{"name":"Jane","profile":{"age":25}},"active":false}
+	]`
+
+	config := Config{
+		Flatten: FlattenConfig{
+			Enabled: true,
+		},
+		Filter: FilterConfig{
+			WhereExprs: []string{"user.profile.age>25"},
+		},
+		Output: OutputConfig{
+			Style: "csv",
+		},
+	}
+
+	application := New(config, strings.NewReader(input))
+
+	// Since we can't easily capture stdout in this test, we'll just verify no error
+	err := application.Run()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestApplication_FilteringWithSelection(t *testing.T) {
+	input := `[
+		{"name":"John","age":30,"city":"NYC","active":true},
+		{"name":"Jane","age":25,"city":"LA","active":false}
+	]`
+
+	config := Config{
+		Selection: SelectionConfig{
+			SelectExpr: "name,age",
+		},
+		Filter: FilterConfig{
+			WhereExprs: []string{"active=true"},
+		},
+		Output: OutputConfig{
+			Style: "csv",
+		},
+	}
+
+	application := New(config, strings.NewReader(input))
+	err := application.Run()
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
 func TestReadSelectFile_Basic(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "sel.txt")

@@ -43,6 +43,9 @@ func main() {
 	root.Flags().StringVarP(&config.Selection.ExcludeExpr, "exclude", "E", "", "Comma-separated dotted path expressions to exclude")
 	root.Flags().BoolVar(&config.Selection.StrictSelect, "strict-select", false, "Error when any selected path does not exist")
 
+	// filtering
+	root.Flags().StringSliceVarP(&config.Filter.WhereExprs, "where", "w", nil, "Filter rows by condition (e.g., 'name=John', 'age>25')")
+
 	// output formatting
 	root.Flags().StringVar(&config.Output.Style, "style", "heavy", "Table style: heavy|light|double|ascii|markdown|compact|borderless|html|csv")
 	root.Flags().BoolVar(&config.Output.ASCIIOnly, "ascii", false, "Force ASCII borders")
