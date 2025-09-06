@@ -10,6 +10,7 @@ import (
 	"github.com/sriharip316/tablo/internal/parse"
 	"github.com/sriharip316/tablo/internal/render"
 	"github.com/sriharip316/tablo/internal/selectors"
+	"github.com/sriharip316/tablo/internal/sort"
 )
 
 // Config groups application configuration into logical sections
@@ -18,6 +19,7 @@ type Config struct {
 	Flatten   FlattenConfig
 	Selection SelectionConfig
 	Filter    FilterConfig
+	Sort      SortConfig
 	Output    OutputConfig
 	General   GeneralConfig
 }
@@ -44,6 +46,11 @@ type SelectionConfig struct {
 
 type FilterConfig struct {
 	WhereExprs []string
+}
+
+type SortConfig struct {
+	Columns    []string
+	Descending bool
 }
 
 type OutputConfig struct {
@@ -214,9 +221,12 @@ func (app *Application) processArray(arr []any, flattenOpts flatten.Options) (re
 		return render.Model{}, err
 	}
 
-	// Apply limit after filtering
-	if app.config.Output.Limit > 0 && len(filteredRows) > app.config.Output.Limit {
-		filteredRows = filteredRows[:app.config.Output.Limit]
+	// Apply sorting
+	sortedRows := app.applySorting(filteredRows)
+
+	// Apply limit after filtering and sorting
+	if app.config.Output.Limit > 0 && len(sortedRows) > app.config.Output.Limit {
+		sortedRows = sortedRows[:app.config.Output.Limit]
 	}
 
 	// Get union of headers
@@ -228,7 +238,7 @@ func (app *Application) processArray(arr []any, flattenOpts flatten.Options) (re
 		return render.Model{}, err
 	}
 
-	return render.FromFlatRows(filteredRows, filteredHeaders, app.config.Output.IndexColumn), nil
+	return render.FromFlatRows(sortedRows, filteredHeaders, app.config.Output.IndexColumn), nil
 }
 
 func (app *Application) applySelection(keys []string) ([]string, error) {
@@ -330,6 +340,20 @@ func (app *Application) applyRowFiltering(rows []flatten.FlatKV) ([]flatten.Flat
 
 	rowFilter := filter.NewFilter(conditions)
 	return rowFilter.Apply(rows), nil
+}
+
+func (app *Application) applySorting(rows []flatten.FlatKV) []flatten.FlatKV {
+	if len(app.config.Sort.Columns) == 0 {
+		return rows
+	}
+
+	sortOpts := sort.Options{
+		Columns:    app.config.Sort.Columns,
+		Descending: app.config.Sort.Descending,
+	}
+
+	sorter := sort.New(sortOpts)
+	return sorter.Sort(rows)
 }
 
 func (app *Application) writeOutput(output string) error {

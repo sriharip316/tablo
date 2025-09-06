@@ -46,6 +46,10 @@ func main() {
 	// filtering
 	root.Flags().StringSliceVarP(&config.Filter.WhereExprs, "where", "w", nil, "Filter rows by condition (e.g., 'name=John', 'age>25')")
 
+	// sorting
+	root.Flags().StringSliceVar(&config.Sort.Columns, "sort", nil, "Sort by columns (comma-separated list)")
+	root.Flags().BoolVar(&config.Sort.Descending, "sort-desc", false, "Sort in descending order")
+
 	// output formatting
 	root.Flags().StringVar(&config.Output.Style, "style", "heavy", "Table style: heavy|light|double|ascii|markdown|compact|borderless|html|csv")
 	root.Flags().BoolVar(&config.Output.ASCIIOnly, "ascii", false, "Force ASCII borders")

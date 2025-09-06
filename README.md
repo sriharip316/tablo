@@ -89,6 +89,32 @@ Output:
 | 3     |
 ```
 
+### Sorting rows
+
+Command:
+
+```bash
+tablo -i '[{"name":"Charlie","age":35},{"name":"Alice","age":30},{"name":"Bob","age":25}]' --sort age
+```
+
+Output:
+
+```
+┏━━━━━┳━━━━━━━━━┓
+┃ age ┃ name    ┃
+┣━━━━━╋━━━━━━━━━┫
+┃ 25  ┃ Bob     ┃
+┃ 30  ┃ Alice   ┃
+┃ 35  ┃ Charlie ┃
+┗━━━━━┻━━━━━━━━━┛
+```
+
+Notes:
+
+- `--sort column1,column2` sorts by multiple columns in order
+- `--sort-desc` reverses the sort order
+- Works with flattened paths (e.g., `--sort user.name`)
+
 ### CSV and HTML output
 
 Export data as CSV for use in spreadsheet applications:
@@ -164,6 +190,42 @@ Output:
 ┗━━━━━━━━━┻━━━━━━━━┛
 ```
 
+### Row sorting
+
+Sort rows using the `--sort` flag with column names:
+
+- `--sort 'name'` - sort by a single column
+- `--sort 'name,age'` - sort by multiple columns (comma-separated)
+- `--sort-desc` - sort in descending order (applies to all columns)
+
+Sorting supports different data types:
+- **Numbers**: sorted numerically (e.g., 1, 2, 10, 100)
+- **Strings**: sorted alphabetically 
+- **Booleans**: false comes before true
+- **Mixed types**: fall back to string comparison
+- **Null values**: always sorted first
+
+This works with flattened paths when using `--dive`.
+
+Example:
+
+```bash
+tablo -f employees.json --sort 'department,age' --select 'name,department,age'
+```
+
+Output:
+
+```
+┏━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━┓
+┃ name    ┃ department  ┃ age ┃
+┣━━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━┫
+┃ Bob     ┃ Engineering ┃ 25  ┃
+┃ Charlie ┃ Engineering ┃ 35  ┃
+┃ David   ┃ Marketing   ┃ 28  ┃
+┃ Alice   ┃ Marketing   ┃ 30  ┃
+┗━━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━┛
+```
+
 ### Formatting options (booleans, precision, null)
 
 You can customize formatting when rendering rows:
@@ -237,7 +299,6 @@ The release process:
 
 ## Future Enhancements
 
-- Sorting rows by column(s).
 - JSON Lines (NDJSON) streaming mode.
 - Colorization and themes.
 - Custom key ordering configs.
