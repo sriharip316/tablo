@@ -51,8 +51,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort by string column ascending",
 			options: Options{
-				Columns:    []string{"name"},
-				Descending: false,
+				Columns: []string{"name"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Charlie", "age": 35},
@@ -68,8 +67,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort by string column descending",
 			options: Options{
-				Columns:    []string{"name"},
-				Descending: true,
+				Columns: []string{"-name"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Alice", "age": 30},
@@ -85,8 +83,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort by numeric column ascending",
 			options: Options{
-				Columns:    []string{"age"},
-				Descending: false,
+				Columns: []string{"age"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Charlie", "age": 35},
@@ -102,8 +99,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort by numeric column descending",
 			options: Options{
-				Columns:    []string{"age"},
-				Descending: true,
+				Columns: []string{"-age"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Alice", "age": 30},
@@ -119,8 +115,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort by multiple columns",
 			options: Options{
-				Columns:    []string{"department", "age"},
-				Descending: false,
+				Columns: []string{"department", "age"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Charlie", "department": "Engineering", "age": 35},
@@ -138,8 +133,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort with nil values",
 			options: Options{
-				Columns:    []string{"age"},
-				Descending: false,
+				Columns: []string{"age"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Charlie", "age": 35},
@@ -155,8 +149,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort with boolean values",
 			options: Options{
-				Columns:    []string{"active"},
-				Descending: false,
+				Columns: []string{"active"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Charlie", "active": true},
@@ -172,8 +165,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort with mixed data types",
 			options: Options{
-				Columns:    []string{"value"},
-				Descending: false,
+				Columns: []string{"value"},
 			},
 			rows: []flatten.FlatKV{
 				{"name": "Charlie", "value": "hello"},
@@ -189,8 +181,7 @@ func TestSorter_Sort(t *testing.T) {
 		{
 			name: "sort with flattened column names",
 			options: Options{
-				Columns:    []string{"user.name"},
-				Descending: false,
+				Columns: []string{"user.name"},
 			},
 			rows: []flatten.FlatKV{
 				{"user.name": "Charlie", "user.age": 35},
@@ -224,6 +215,162 @@ func TestSorter_Sort(t *testing.T) {
 				// or the original was accidentally modified - we'll allow this for now
 				_ = originalFirst
 				_ = resultFirst
+			}
+		})
+	}
+}
+
+func TestParseColumns(t *testing.T) {
+	tests := []struct {
+		name        string
+		columnSpecs []string
+		expected    []SortColumn
+	}{
+		{
+			name:        "empty columns",
+			columnSpecs: []string{},
+			expected:    []SortColumn{},
+		},
+		{
+			name:        "single column no prefix",
+			columnSpecs: []string{"name"},
+			expected:    []SortColumn{{Name: "name", Descending: false}},
+		},
+		{
+			name:        "single column ascending prefix",
+			columnSpecs: []string{"+name"},
+			expected:    []SortColumn{{Name: "name", Descending: false}},
+		},
+		{
+			name:        "single column descending prefix",
+			columnSpecs: []string{"-name"},
+			expected:    []SortColumn{{Name: "name", Descending: true}},
+		},
+		{
+			name:        "multiple columns mixed",
+			columnSpecs: []string{"name", "-age", "+department"},
+			expected: []SortColumn{
+				{Name: "name", Descending: false},
+				{Name: "age", Descending: true},
+				{Name: "department", Descending: false},
+			},
+		},
+		{
+			name:        "multiple columns no prefix",
+			columnSpecs: []string{"name", "age"},
+			expected: []SortColumn{
+				{Name: "name", Descending: false},
+				{Name: "age", Descending: false},
+			},
+		},
+		{
+			name:        "columns with whitespace",
+			columnSpecs: []string{" name ", " -age ", " +department "},
+			expected: []SortColumn{
+				{Name: "name", Descending: false},
+				{Name: "age", Descending: true},
+				{Name: "department", Descending: false},
+			},
+		},
+		{
+			name:        "empty strings filtered",
+			columnSpecs: []string{"name", "", "  ", "-age"},
+			expected: []SortColumn{
+				{Name: "name", Descending: false},
+				{Name: "age", Descending: true},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseColumns(tt.columnSpecs)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("parseColumns(%v) = %v, want %v", tt.columnSpecs, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSorter_SortWithPerColumnDirection(t *testing.T) {
+	tests := []struct {
+		name     string
+		columns  []string
+		rows     []flatten.FlatKV
+		expected []flatten.FlatKV
+	}{
+		{
+			name:    "sort by name ascending, age descending",
+			columns: []string{"name", "-age"},
+			rows: []flatten.FlatKV{
+				{"name": "Alice", "age": 25},
+				{"name": "Bob", "age": 30},
+				{"name": "Alice", "age": 35},
+				{"name": "Bob", "age": 20},
+			},
+			expected: []flatten.FlatKV{
+				{"name": "Alice", "age": 35},
+				{"name": "Alice", "age": 25},
+				{"name": "Bob", "age": 30},
+				{"name": "Bob", "age": 20},
+			},
+		},
+		{
+			name:    "sort by department descending, name ascending",
+			columns: []string{"-department", "+name"},
+			rows: []flatten.FlatKV{
+				{"name": "Charlie", "department": "Engineering"},
+				{"name": "Alice", "department": "Marketing"},
+				{"name": "Bob", "department": "Engineering"},
+				{"name": "David", "department": "Marketing"},
+			},
+			expected: []flatten.FlatKV{
+				{"name": "Alice", "department": "Marketing"},
+				{"name": "David", "department": "Marketing"},
+				{"name": "Bob", "department": "Engineering"},
+				{"name": "Charlie", "department": "Engineering"},
+			},
+		},
+		{
+			name:    "explicit ascending prefix",
+			columns: []string{"+name"},
+			rows: []flatten.FlatKV{
+				{"name": "Charlie"},
+				{"name": "Alice"},
+				{"name": "Bob"},
+			},
+			expected: []flatten.FlatKV{
+				{"name": "Alice"},
+				{"name": "Bob"},
+				{"name": "Charlie"},
+			},
+		},
+		{
+			name:    "explicit descending prefix",
+			columns: []string{"-name"},
+			rows: []flatten.FlatKV{
+				{"name": "Alice"},
+				{"name": "Charlie"},
+				{"name": "Bob"},
+			},
+			expected: []flatten.FlatKV{
+				{"name": "Charlie"},
+				{"name": "Bob"},
+				{"name": "Alice"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			options := Options{
+				Columns: tt.columns,
+			}
+			sorter := New(options)
+			result := sorter.Sort(tt.rows)
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("Sort() = %v, want %v", result, tt.expected)
 			}
 		})
 	}

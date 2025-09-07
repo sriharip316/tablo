@@ -49,8 +49,7 @@ type FilterConfig struct {
 }
 
 type SortConfig struct {
-	Columns    []string
-	Descending bool
+	Columns []string
 }
 
 type OutputConfig struct {
@@ -347,9 +346,14 @@ func (app *Application) applySorting(rows []flatten.FlatKV) []flatten.FlatKV {
 		return rows
 	}
 
+	// Parse comma-separated column specifications
+	var expandedColumns []string
+	for _, col := range app.config.Sort.Columns {
+		expandedColumns = append(expandedColumns, splitCommaString(col)...)
+	}
+
 	sortOpts := sort.Options{
-		Columns:    app.config.Sort.Columns,
-		Descending: app.config.Sort.Descending,
+		Columns: expandedColumns,
 	}
 
 	sorter := sort.New(sortOpts)

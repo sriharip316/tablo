@@ -637,3 +637,111 @@ func TestNormalizeData_NoChangeForArrayAndMap(t *testing.T) {
 		t.Fatalf("expected map[string]any, got %T", got)
 	}
 }
+
+func TestApplication_SortingWithPerColumnDirection(t *testing.T) {
+	tests := []struct {
+		name          string
+		sortColumns   []string
+		inputRows     []flatten.FlatKV
+		expectedOrder []string // names in expected order
+	}{
+		{
+			name:        "sort by name ascending, age descending",
+			sortColumns: []string{"name", "-age"},
+			inputRows: []flatten.FlatKV{
+				{"name": "Alice", "age": 25},
+				{"name": "Bob", "age": 30},
+				{"name": "Alice", "age": 35},
+				{"name": "Bob", "age": 20},
+			},
+			expectedOrder: []string{"Alice", "Alice", "Bob", "Bob"}, // Alice (35, 25), Bob (30, 20)
+		},
+		{
+			name:        "sort with explicit ascending prefix",
+			sortColumns: []string{"+name"},
+			inputRows: []flatten.FlatKV{
+				{"name": "Charlie"},
+				{"name": "Alice"},
+				{"name": "Bob"},
+			},
+			expectedOrder: []string{"Alice", "Bob", "Charlie"},
+		},
+		{
+			name:        "sort with explicit descending prefix",
+			sortColumns: []string{"-name"},
+			inputRows: []flatten.FlatKV{
+				{"name": "Alice"},
+				{"name": "Charlie"},
+				{"name": "Bob"},
+			},
+			expectedOrder: []string{"Charlie", "Bob", "Alice"},
+		},
+		{
+			name:        "sort with no prefix defaults to ascending",
+			sortColumns: []string{"name"},
+			inputRows: []flatten.FlatKV{
+				{"name": "Charlie"},
+				{"name": "Alice"},
+				{"name": "Bob"},
+			},
+			expectedOrder: []string{"Alice", "Bob", "Charlie"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &Application{
+				config: Config{
+					Sort: SortConfig{
+						Columns: tt.sortColumns,
+					},
+				},
+			}
+
+			result := app.applySorting(tt.inputRows)
+
+			if len(result) != len(tt.expectedOrder) {
+				t.Errorf("expected %d rows, got %d", len(tt.expectedOrder), len(result))
+				return
+			}
+
+			for i, expectedName := range tt.expectedOrder {
+				if result[i]["name"] != expectedName {
+					t.Errorf("at position %d: expected name %s, got %s", i, expectedName, result[i]["name"])
+				}
+			}
+		})
+	}
+}
+
+func TestSplitCommaStringInSorting(t *testing.T) {
+	app := &Application{
+		config: Config{
+			Sort: SortConfig{
+				Columns: []string{"name,age", "-department"},
+			},
+		},
+	}
+
+	rows := []flatten.FlatKV{
+		{"name": "Bob", "age": 25, "department": "Sales"},
+		{"name": "Alice", "age": 30, "department": "Engineering"},
+	}
+
+	result := app.applySorting(rows)
+
+	// Should be sorted by: name (asc), age (asc), department (desc)
+	// Alice should come before Bob
+	if len(result) != 2 {
+		t.Errorf("expected 2 rows, got %d", len(result))
+		return
+	}
+
+	if result[0]["name"] != "Alice" {
+		t.Errorf("expected first row name to be Alice, got %s", result[0]["name"])
+	}
+
+	if result[1]["name"] != "Bob" {
+		t.Errorf("expected second row name to be Bob, got %s", result[1]["name"])
+	}
+}

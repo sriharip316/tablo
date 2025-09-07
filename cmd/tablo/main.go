@@ -47,8 +47,7 @@ func main() {
 	root.Flags().StringSliceVarP(&config.Filter.WhereExprs, "where", "w", nil, "Filter rows by condition (e.g., 'name=John', 'age>25')")
 
 	// sorting
-	root.Flags().StringSliceVar(&config.Sort.Columns, "sort", nil, "Sort by columns (comma-separated list)")
-	root.Flags().BoolVar(&config.Sort.Descending, "sort-desc", false, "Sort in descending order")
+	root.Flags().StringSliceVar(&config.Sort.Columns, "sort", nil, "Sort by columns; use +/- prefix for direction (e.g., 'name,-age' or '+name,-age')")
 
 	// output formatting
 	root.Flags().StringVar(&config.Output.Style, "style", "heavy", "Table style: heavy|light|double|ascii|markdown|compact|borderless|html|csv")

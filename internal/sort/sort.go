@@ -10,22 +10,61 @@ import (
 
 // Options contains configuration for sorting rows
 type Options struct {
-	Columns    []string // Column names to sort by
-	Descending bool     // If true, sort in descending order
+	Columns []string // Column names to sort by (with optional +/- prefix)
+}
+
+// SortColumn represents a column with its sort direction
+type SortColumn struct {
+	Name       string
+	Descending bool
 }
 
 // Sorter handles sorting of flattened rows
 type Sorter struct {
-	columns    []string
-	descending bool
+	columns []SortColumn
 }
 
 // New creates a new Sorter with the given options
 func New(opts Options) *Sorter {
+	columns := parseColumns(opts.Columns)
 	return &Sorter{
-		columns:    opts.Columns,
-		descending: opts.Descending,
+		columns: columns,
 	}
+}
+
+// parseColumns parses column specifications with optional +/- prefixes
+func parseColumns(columnSpecs []string) []SortColumn {
+	if len(columnSpecs) == 0 {
+		return []SortColumn{}
+	}
+
+	var columns []SortColumn
+
+	for _, spec := range columnSpecs {
+		spec = strings.TrimSpace(spec)
+		if spec == "" {
+			continue
+		}
+
+		var column SortColumn
+
+		// Check for explicit direction prefix
+		if strings.HasPrefix(spec, "+") {
+			column.Descending = false
+			column.Name = spec[1:]
+		} else if strings.HasPrefix(spec, "-") {
+			column.Descending = true
+			column.Name = spec[1:]
+		} else {
+			// No prefix defaults to ascending
+			column.Descending = false
+			column.Name = spec
+		}
+
+		columns = append(columns, column)
+	}
+
+	return columns
 }
 
 // Sort sorts the given rows by the configured columns
@@ -47,12 +86,12 @@ func (s *Sorter) Sort(rows []flatten.FlatKV) []flatten.FlatKV {
 // compare compares two rows based on the configured sort columns
 func (s *Sorter) compare(a, b flatten.FlatKV) bool {
 	for _, col := range s.columns {
-		valA := a[col]
-		valB := b[col]
+		valA := a[col.Name]
+		valB := b[col.Name]
 
 		cmp := compareValues(valA, valB)
 		if cmp != 0 {
-			if s.descending {
+			if col.Descending {
 				return cmp > 0
 			}
 			return cmp < 0
