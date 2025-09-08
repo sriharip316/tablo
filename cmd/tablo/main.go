@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/sriharip316/tablo/internal/app"
 )
@@ -22,6 +23,10 @@ func main() {
 		Version: version,
 		Short:   "Render JSON/YAML as tables",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if there's no input provided
+			if hasNoInput(&config) {
+				return cmd.Help()
+			}
 			return runApp(&config)
 		},
 	}
@@ -73,6 +78,34 @@ func main() {
 	if err := root.Execute(); err != nil {
 		handleError(err, config.General.Quiet)
 	}
+}
+
+// hasNoInput checks if no input source is provided (no string input, no file input, no stdin data)
+func hasNoInput(config *app.Config) bool {
+	// If string input or file input is provided, we have input
+	if config.Input.String != "" || config.Input.File != "" {
+		return false
+	}
+
+	// Check if stdin is a terminal (interactive mode)
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return true
+	}
+
+	// If stdin is a character device (terminal), we have no piped input
+	isCharDevice := (stat.Mode() & os.ModeCharDevice) != 0
+
+	// Use term.IsTerminal as fallback for more reliable terminal detection
+	isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
+
+	// If it's a character device or terminal, no piped input available
+	if isCharDevice || isTerminal {
+		return true
+	}
+
+	// If it's a pipe or regular file (not char device), we have input
+	return false
 }
 
 // runApp executes the main application logic

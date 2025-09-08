@@ -498,3 +498,22 @@ func TestCLI_FilteringNoMatches(t *testing.T) {
 		t.Fatalf("expected empty output when no rows match, got: %s", out)
 	}
 }
+
+func TestCLI_NoInput_ShowsHelp(t *testing.T) {
+	// Test that help is displayed when no input is provided
+	args := []string{}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	// Should display help text
+	if !strings.Contains(out, "Usage:") {
+		t.Fatalf("expected help text with 'Usage:', got: %s", out)
+	}
+	if !strings.Contains(out, "Render JSON/YAML as tables") {
+		t.Fatalf("expected help text with description, got: %s", out)
+	}
+	if !strings.Contains(out, "Flags:") {
+		t.Fatalf("expected help text with 'Flags:', got: %s", out)
+	}
+}
