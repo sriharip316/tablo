@@ -137,20 +137,20 @@ You can specify sort direction for each column individually using `+` (ascending
 
 ```bash
 # Sort by department (ascending), then by age (descending)
-tablo -f data.json --sort "department,-age"
+tablo -f data.json --sort 'department,-age'
 
 # Explicit ascending prefix (same as no prefix)
-tablo -f data.json --sort "+name,-salary"
+tablo -f data.json --sort '+name,-salary'
 
 # Mixed directions with multiple columns
-tablo -f data.json --sort "active,-salary,name"
+tablo -f data.json --sort 'active,-salary,name'
 ```
 
 Notes:
 
-- `--sort column1,column2` sorts by multiple columns in order
-- `--sort +column1,-column2` sorts column1 ascending, column2 descending
-- Works with flattened paths (e.g., `--sort user.name,-user.age`)
+- `--sort 'column1,column2'` sorts by multiple columns in order
+- `--sort '+column1,-column2'` sorts column1 ascending, column2 descending
+- Works with flattened paths (e.g., `--sort 'user.name,-user.age'`)
 
 ### Row sorting
 
@@ -261,48 +261,6 @@ Output:
 ┃ Charlie ┃ 80000  ┃
 ┃ Frank   ┃ 90000  ┃
 ┗━━━━━━━━━┻━━━━━━━━┛
-```
-
-### Row sorting with per-column direction
-
-Sort rows using the `--sort` flag with column names and optional direction prefixes:
-
-- `--sort 'name'` - sort by a single column
-- `--sort 'name,age'` - sort by multiple columns (comma-separated)
-- `--sort '+name,-age'` - sort by name ascending, then age descending
-
-Direction prefixes:
-
-- `+column` or `column` - ascending order (default)
-- `-column` - descending order
-
-Sorting supports different data types:
-
-- **Numbers**: sorted numerically (e.g., 1, 2, 10, 100)
-- **Strings**: sorted alphabetically
-- **Booleans**: false comes before true
-- **Mixed types**: fall back to string comparison
-- **Null values**: always sorted first
-
-This works with flattened paths when using `--dive`.
-
-Example:
-
-```bash
-tablo -f employees.json --sort 'department,-age' --select 'name,department,age'
-```
-
-Output:
-
-```
-┏━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━┓
-┃ name    ┃ department  ┃ age ┃
-┣━━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━┫
-┃ Charlie ┃ Engineering ┃ 35  ┃
-┃ Bob     ┃ Engineering ┃ 25  ┃
-┃ Alice   ┃ Marketing   ┃ 30  ┃
-┃ David   ┃ Marketing   ┃ 28  ┃
-┗━━━━━━━━━┻━━━━━━━━━━━━━┻━━━━━┛
 ```
 
 ### Formatting options (booleans, precision, null)
