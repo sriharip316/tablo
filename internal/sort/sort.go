@@ -2,6 +2,7 @@ package sort
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -77,8 +78,10 @@ func (s *Sorter) Sort(rows []flatten.FlatKV) []flatten.FlatKV {
 	sorted := make([]flatten.FlatKV, len(rows))
 	copy(sorted, rows)
 
-	// Sort using a stable sort algorithm
-	stableSort(sorted, s.compare)
+	// Sort using Go's stable sort
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return s.compare(sorted[i], sorted[j])
+	})
 
 	return sorted
 }
@@ -222,76 +225,5 @@ func toString(v any) string {
 		return "false"
 	default:
 		return strings.ToLower(fmt.Sprintf("%v", val))
-	}
-}
-
-// stableSort implements a stable sorting algorithm
-func stableSort(data []flatten.FlatKV, less func(flatten.FlatKV, flatten.FlatKV) bool) {
-	n := len(data)
-	if n <= 1 {
-		return
-	}
-
-	// Use merge sort for stable sorting
-	mergeSort(data, 0, n-1, less)
-}
-
-// mergeSort recursively sorts the slice using merge sort
-func mergeSort(data []flatten.FlatKV, left, right int, less func(flatten.FlatKV, flatten.FlatKV) bool) {
-	if left >= right {
-		return
-	}
-
-	mid := left + (right-left)/2
-	mergeSort(data, left, mid, less)
-	mergeSort(data, mid+1, right, less)
-	merge(data, left, mid, right, less)
-}
-
-// merge merges two sorted subarrays
-func merge(data []flatten.FlatKV, left, mid, right int, less func(flatten.FlatKV, flatten.FlatKV) bool) {
-	// Create temporary arrays for the two subarrays
-	leftSize := mid - left + 1
-	rightSize := right - mid
-
-	leftArr := make([]flatten.FlatKV, leftSize)
-	rightArr := make([]flatten.FlatKV, rightSize)
-
-	// Copy data to temporary arrays
-	for i := 0; i < leftSize; i++ {
-		leftArr[i] = data[left+i]
-	}
-	for j := 0; j < rightSize; j++ {
-		rightArr[j] = data[mid+1+j]
-	}
-
-	// Merge the temporary arrays back into data[left..right]
-	i := 0    // Initial index of first subarray
-	j := 0    // Initial index of second subarray
-	k := left // Initial index of merged subarray
-
-	for i < leftSize && j < rightSize {
-		if !less(rightArr[j], leftArr[i]) {
-			data[k] = leftArr[i]
-			i++
-		} else {
-			data[k] = rightArr[j]
-			j++
-		}
-		k++
-	}
-
-	// Copy the remaining elements of leftArr[], if any
-	for i < leftSize {
-		data[k] = leftArr[i]
-		i++
-		k++
-	}
-
-	// Copy the remaining elements of rightArr[], if any
-	for j < rightSize {
-		data[k] = rightArr[j]
-		j++
-		k++
 	}
 }
