@@ -179,6 +179,13 @@ func (app *Application) normalizeData(parsed any) any {
 		return v
 	case map[any]any:
 		return parse.ToStringKeyMap(v)
+	case []map[string]any:
+		// Convert []map[string]any to []any for CSV support
+		result := make([]any, len(v))
+		for i, m := range v {
+			result[i] = m
+		}
+		return result
 	default:
 		return v
 	}

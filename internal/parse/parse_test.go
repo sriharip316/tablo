@@ -146,6 +146,53 @@ func TestParse_InvalidFormat(t *testing.T) {
 	}
 }
 
+func TestParse_CSV(t *testing.T) {
+	csvData := []byte(`name,age,city
+John,30,NYC
+Jane,25,LA`)
+	v, err := Parse(csvData, CSV)
+	if err != nil {
+		t.Fatalf("parse CSV: %v", err)
+	}
+	arr, ok := v.([]map[string]any)
+	if !ok || len(arr) != 2 {
+		t.Fatalf("expected 2 objects, got %T", v)
+	}
+	if arr[0]["name"] != "John" {
+		t.Fatalf("unexpected name: %v", arr[0]["name"])
+	}
+	if arr[0]["age"] != "30" {
+		t.Fatalf("unexpected age: %v", arr[0]["age"])
+	}
+	if arr[1]["city"] != "LA" {
+		t.Fatalf("unexpected city: %v", arr[1]["city"])
+	}
+}
+
+func TestDetect_CSVExtension(t *testing.T) {
+	data := []byte("name,age\nJohn,30")
+	d := Detector{FilePath: "data.csv", Explicit: ""}
+	if got := d.Detect(data); got != CSV {
+		t.Fatalf("want CSV got %v", got)
+	}
+}
+
+func TestDetect_CSVSniff(t *testing.T) {
+	data := []byte("name,age,city\nJohn,30,NYC")
+	d := Detector{Explicit: "auto"}
+	if got := d.Detect(data); got != CSV {
+		t.Fatalf("want CSV got %v", got)
+	}
+}
+
+func TestDetect_CSVExplicit(t *testing.T) {
+	data := []byte("name,age\nJohn,30")
+	d := Detector{Explicit: "csv"}
+	if got := d.Detect(data); got != CSV {
+		t.Fatalf("want CSV got %v", got)
+	}
+}
+
 func TestParse_YAMLMultiDocWithNilDocs(t *testing.T) {
 	yaml := strings.TrimSpace(`
 ---

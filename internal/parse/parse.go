@@ -2,6 +2,7 @@ package parse
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +20,7 @@ const (
 	JSON Format = "json"
 	YAML Format = "yaml"
 	YML  Format = "yml"
+	CSV  Format = "csv"
 )
 
 type Detector struct {
@@ -33,6 +35,8 @@ func (d Detector) Detect(data []byte) Format {
 			return JSON
 		case "yaml", "yml":
 			return YAML
+		case "csv":
+			return CSV
 		}
 	}
 	// by extension
@@ -42,6 +46,9 @@ func (d Detector) Detect(data []byte) Format {
 	}
 	if strings.HasSuffix(low, ".yaml") || strings.HasSuffix(low, ".yml") {
 		return YAML
+	}
+	if strings.HasSuffix(low, ".csv") {
+		return CSV
 	}
 	// sniff
 	trim := bytes.TrimLeft(data, " \t\r\n")
@@ -55,6 +62,13 @@ func (d Detector) Detect(data []byte) Format {
 		cleanTrim := bytes.TrimLeft(cleanJSON, " \t\r\n")
 		if len(cleanTrim) > 0 && (cleanTrim[0] == '{' || cleanTrim[0] == '[') {
 			return JSON
+		}
+	}
+	// Check for CSV by looking for comma-separated values in first line
+	if len(trim) > 0 {
+		firstLine := strings.Split(string(trim), "\n")[0]
+		if strings.Contains(firstLine, ",") && !strings.Contains(firstLine, "{") && !strings.Contains(firstLine, ":") {
+			return CSV
 		}
 	}
 	return YAML
@@ -94,9 +108,36 @@ func Parse(data []byte, f Format) (any, error) {
 			return docs[0], nil
 		}
 		return docs, nil
+	case CSV:
+		return parseCSV(data)
 	default:
 		return nil, ErrInvalidFormat
 	}
+}
+
+// parseCSV converts CSV data to []map[string]any
+func parseCSV(data []byte) (any, error) {
+	reader := csv.NewReader(strings.NewReader(string(data)))
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return []map[string]any{}, nil
+	}
+
+	headers := records[0]
+	var result []map[string]any
+	for _, row := range records[1:] {
+		obj := make(map[string]any)
+		for i, value := range row {
+			if i < len(headers) {
+				obj[headers[i]] = value
+			}
+		}
+		result = append(result, obj)
+	}
+	return result, nil
 }
 
 var ErrInvalidFormat = errors.New("invalid format")

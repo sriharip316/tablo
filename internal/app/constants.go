@@ -46,6 +46,7 @@ const (
 	FormatJSON = "json"
 	FormatYAML = "yaml"
 	FormatYML  = "yml"
+	FormatCSV  = "csv"
 )
 
 // Header case constants

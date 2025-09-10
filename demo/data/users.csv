@@ -1,0 +1,9 @@
+active,age,city,department,email,id,name,salary,score
+true,28,New York,Engineering,alice@example.com,1,Alice Johnson,75000,95.5
+false,34,San Francisco,Marketing,bob@example.com,2,Bob Smith,65000,87.2
+true,29,Seattle,Engineering,carol@example.com,3,Carol Davis,80000,92.8
+true,42,Austin,Sales,david@example.com,4,David Wilson,70000,78.9
+false,26,Portland,Design,eve@example.com,5,Eve Brown,60000,89.1
+true,38,Boston,Engineering,frank@example.com,6,Frank Miller,85000,83.7
+true,31,Chicago,Marketing,grace@example.com,7,Grace Lee,72000,96.3
+false,45,Miami,Sales,henry@example.com,8,Henry Taylor,68000,74.5

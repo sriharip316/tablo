@@ -1,6 +1,6 @@
 # tablo
 
-A CLI tool to render JSON/YAML as pretty tables. It supports flattening of nested objects, selecting/excluding columns, filtering rows, and multiple output styles.
+A CLI tool to render CSV/JSON/YAML as pretty tables. It supports flattening of nested objects, selecting/excluding columns, filtering rows, and multiple output styles.
 
 ## Quick start
 
@@ -71,6 +71,28 @@ Notes:
 - `--index-column` adds an auto index column for row arrays.
 - Use `--limit N` to restrict the number of printed rows.
 
+### CSV input
+
+Tablo can parse CSV files or piped CSV data. The first row is treated as headers, and subsequent rows as data objects.
+
+Command:
+
+```bash
+tablo -f demo/data/users.csv --select name,score --where 'score>90'
+```
+
+Output:
+
+```
+┏━━━━━━━━━━━━━━━┳━━━━━━━┓
+┃ name          ┃ score ┃
+┣━━━━━━━━━━━━━━━╋━━━━━━━┫
+┃ Alice Johnson ┃ 95.5  ┃
+┃ Carol Davis   ┃ 92.8  ┃
+┃ Grace Lee     ┃ 96.3  ┃
+┗━━━━━━━━━━━━━━━┻━━━━━━━┛
+```
+
 ### Array of primitives
 
 Command:
@@ -130,7 +152,6 @@ Notes:
 - `--sort +column1,-column2` sorts column1 ascending, column2 descending
 - Works with flattened paths (e.g., `--sort user.name,-user.age`)
 
-<old_text line=252>
 ### Row sorting
 
 Sort rows using the `--sort` flag with column names:
@@ -139,8 +160,9 @@ Sort rows using the `--sort` flag with column names:
 - `--sort 'name,age'` - sort by multiple columns (comma-separated)
 
 Sorting supports different data types:
+
 - **Numbers**: sorted numerically (e.g., 1, 2, 10, 100)
-- **Strings**: sorted alphabetically 
+- **Strings**: sorted alphabetically
 - **Booleans**: false comes before true
 - **Mixed types**: fall back to string comparison
 - **Null values**: always sorted first
@@ -250,12 +272,14 @@ Sort rows using the `--sort` flag with column names and optional direction prefi
 - `--sort '+name,-age'` - sort by name ascending, then age descending
 
 Direction prefixes:
+
 - `+column` or `column` - ascending order (default)
 - `-column` - descending order
 
 Sorting supports different data types:
+
 - **Numbers**: sorted numerically (e.g., 1, 2, 10, 100)
-- **Strings**: sorted alphabetically 
+- **Strings**: sorted alphabetically
 - **Booleans**: false comes before true
 - **Mixed types**: fall back to string comparison
 - **Null values**: always sorted first
