@@ -23,7 +23,7 @@ func TestReader_File(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, _ = f.WriteString("filedata")
 	r := NewReader("", f.Name(), nil)
 	b, err := r.Read()

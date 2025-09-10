@@ -194,7 +194,7 @@ func ArrayIsObjects(arr []any) bool {
 	for _, it := range arr {
 		_, is1 := it.(map[string]any)
 		_, is2 := it.(map[any]any)
-		if !(is1 || is2) {
+		if !is1 && !is2 {
 			allObjs = false
 			break
 		}
