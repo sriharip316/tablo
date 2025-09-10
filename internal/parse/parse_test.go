@@ -26,7 +26,7 @@ a: 1
 ---
 b: 2
 `)
-	v, err := Parse([]byte(yaml), YAML)
+	v, err := Parse([]byte(yaml), YAML, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse yaml: %v", err)
 	}
@@ -38,7 +38,7 @@ b: 2
 
 func TestParseJSON_NumberNormalization(t *testing.T) {
 	data := []byte(`{"a": 1.5, "b": [1,2,3]}`)
-	v, err := Parse(data, JSON)
+	v, err := Parse(data, JSON, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse json: %v", err)
 	}
@@ -109,14 +109,14 @@ func TestDetect_SniffJSONWithLeadingSpaces(t *testing.T) {
 
 func TestParse_InvalidJSON(t *testing.T) {
 	bad := []byte("{\"a\": 1")
-	if _, err := Parse(bad, JSON); err == nil {
+	if _, err := Parse(bad, JSON, ParseOptions{}); err == nil {
 		t.Fatal("expected JSON parse error")
 	}
 }
 
 func TestParse_InvalidYAML(t *testing.T) {
 	bad := []byte("a: [1,2\n")
-	if _, err := Parse(bad, YAML); err == nil {
+	if _, err := Parse(bad, YAML, ParseOptions{}); err == nil {
 		t.Fatal("expected YAML parse error")
 	}
 }
@@ -129,7 +129,7 @@ func TestParse_YAMLSkipEmptyDocs(t *testing.T) {
 a: 1
 ---
 `)
-	v, err := Parse([]byte(yaml), YAML)
+	v, err := Parse([]byte(yaml), YAML, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse yaml: %v", err)
 	}
@@ -139,7 +139,7 @@ a: 1
 }
 
 func TestParse_InvalidFormat(t *testing.T) {
-	if _, err := Parse([]byte("a: 1"), Format("bogus")); err == nil {
+	if _, err := Parse([]byte("a: 1"), Format("bogus"), ParseOptions{}); err == nil {
 		t.Fatal("expected invalid format error")
 	} else if err != ErrInvalidFormat {
 		t.Fatalf("expected ErrInvalidFormat got %v", err)
@@ -150,7 +150,7 @@ func TestParse_CSV(t *testing.T) {
 	csvData := []byte(`name,age,city
 John,30,NYC
 Jane,25,LA`)
-	v, err := Parse(csvData, CSV)
+	v, err := Parse(csvData, CSV, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse CSV: %v", err)
 	}
@@ -166,6 +166,28 @@ Jane,25,LA`)
 	}
 	if arr[1]["city"] != "LA" {
 		t.Fatalf("unexpected city: %v", arr[1]["city"])
+	}
+}
+
+func TestParse_CSVNoHeader(t *testing.T) {
+	csvData := []byte(`John,30,NYC
+Jane,25,LA`)
+	v, err := Parse(csvData, CSV, ParseOptions{CSVNoHeader: true})
+	if err != nil {
+		t.Fatalf("parse CSV no header: %v", err)
+	}
+	arr, ok := v.([]map[string]any)
+	if !ok || len(arr) != 2 {
+		t.Fatalf("expected 2 objects, got %T", v)
+	}
+	if arr[0]["col0"] != "John" {
+		t.Fatalf("unexpected col0: %v", arr[0]["col0"])
+	}
+	if arr[0]["col1"] != "30" {
+		t.Fatalf("unexpected col1: %v", arr[0]["col1"])
+	}
+	if arr[1]["col2"] != "LA" {
+		t.Fatalf("unexpected col2: %v", arr[1]["col2"])
 	}
 }
 
@@ -202,7 +224,7 @@ func TestParse_YAMLMultiDocWithNilDocs(t *testing.T) {
 ---
 b: 2
 `)
-	v, err := Parse([]byte(yaml), YAML)
+	v, err := Parse([]byte(yaml), YAML, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse yaml: %v", err)
 	}
@@ -232,7 +254,7 @@ func TestParse_JSONWithComments(t *testing.T) {
 		}
 	}`)
 
-	v, err := Parse(jsonWithComments, JSON)
+	v, err := Parse(jsonWithComments, JSON, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse JSON with comments: %v", err)
 	}
@@ -265,7 +287,7 @@ func TestParse_JSONArrayWithComments(t *testing.T) {
 		// End of array
 	]`)
 
-	v, err := Parse(jsonArray, JSON)
+	v, err := Parse(jsonArray, JSON, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse JSON array with comments: %v", err)
 	}
@@ -294,7 +316,7 @@ data:
   other: data
 `)
 
-	v, err := Parse(yamlWithComments, YAML)
+	v, err := Parse(yamlWithComments, YAML, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse YAML with comments: %v", err)
 	}
@@ -327,7 +349,7 @@ func TestParse_JSONCommentsInAutoDetect(t *testing.T) {
 		t.Fatalf("expected JSON detection, got %v", format)
 	}
 
-	v, err := Parse(jsonWithComments, format)
+	v, err := Parse(jsonWithComments, format, ParseOptions{})
 	if err != nil {
 		t.Fatalf("parse auto-detected JSON with comments: %v", err)
 	}

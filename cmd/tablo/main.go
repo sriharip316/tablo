@@ -35,6 +35,7 @@ func main() {
 	root.Flags().StringVarP(&config.Input.File, "file", "f", "", "Path to input file")
 	root.Flags().StringVarP(&config.Input.String, "input", "i", "", "Raw input string")
 	root.Flags().StringVarP(&config.Input.Format, "format", "F", "auto", "Input format: auto|json|yaml|yml|csv")
+	root.Flags().BoolVar(&config.Input.CSVNoHeader, "csv-no-header", false, "Treat CSV input as having no header row")
 
 	// flatten
 	root.Flags().BoolVarP(&config.Flatten.Enabled, "dive", "d", false, "Enable flattening of nested objects and arrays of objects")

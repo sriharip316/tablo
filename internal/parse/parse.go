@@ -74,7 +74,11 @@ func (d Detector) Detect(data []byte) Format {
 	return YAML
 }
 
-func Parse(data []byte, f Format) (any, error) {
+type ParseOptions struct {
+	CSVNoHeader bool
+}
+
+func Parse(data []byte, f Format, opts ParseOptions) (any, error) {
 	switch f {
 	case JSON:
 		// Strip comments from JSON using jsonc library
@@ -109,14 +113,14 @@ func Parse(data []byte, f Format) (any, error) {
 		}
 		return docs, nil
 	case CSV:
-		return parseCSV(data)
+		return parseCSV(data, opts.CSVNoHeader)
 	default:
 		return nil, ErrInvalidFormat
 	}
 }
 
 // parseCSV converts CSV data to []map[string]any
-func parseCSV(data []byte) (any, error) {
+func parseCSV(data []byte, noHeader bool) (any, error) {
 	reader := csv.NewReader(strings.NewReader(string(data)))
 	records, err := reader.ReadAll()
 	if err != nil {
@@ -126,13 +130,28 @@ func parseCSV(data []byte) (any, error) {
 		return []map[string]any{}, nil
 	}
 
-	headers := records[0]
+	var headers []string
+	var startRow int
+
+	if noHeader {
+		// Generate column headers as col0, col1, etc.
+		headers = make([]string, len(records[0]))
+		for i := range headers {
+			headers[i] = fmt.Sprintf("col%d", i)
+		}
+		startRow = 0
+	} else {
+		headers = records[0]
+		startRow = 1
+	}
+
 	var result []map[string]any
-	for _, row := range records[1:] {
+	for i := startRow; i < len(records); i++ {
+		row := records[i]
 		obj := make(map[string]any)
-		for i, value := range row {
-			if i < len(headers) {
-				obj[headers[i]] = value
+		for j, value := range row {
+			if j < len(headers) {
+				obj[headers[j]] = value
 			}
 		}
 		result = append(result, obj)

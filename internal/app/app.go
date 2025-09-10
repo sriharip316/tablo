@@ -25,9 +25,10 @@ type Config struct {
 }
 
 type InputConfig struct {
-	File   string
-	String string
-	Format string
+	File        string
+	String      string
+	Format      string
+	CSVNoHeader bool
 }
 
 type FlattenConfig struct {
@@ -144,7 +145,10 @@ func (app *Application) parseData(data []byte) (any, error) {
 		FilePath: app.config.Input.File,
 	}
 	format := detector.Detect(data)
-	return parse.Parse(data, format)
+	opts := parse.ParseOptions{
+		CSVNoHeader: app.config.Input.CSVNoHeader,
+	}
+	return parse.Parse(data, format, opts)
 }
 
 func (app *Application) processData(parsed any) (render.Model, error) {
