@@ -446,6 +446,140 @@ func TestOperator_String(t *testing.T) {
 	}
 }
 
+func TestFilter_Apply_Coverage(t *testing.T) {
+	rows := []flatten.FlatKV{
+		{
+			"name":    "John",
+			"age":     30,
+			"score":   85.5,
+			"active":  true,
+			"data":    []interface{}{1, "a"},
+			"another": "a",
+		},
+		{
+			"name":    "Jane",
+			"age":     "25",
+			"score":   "92.0",
+			"active":  false,
+			"data":    nil,
+			"another": "b",
+		},
+		{
+			"name":    "Bob",
+			"age":     int8(35),
+			"score":   float32(78.0),
+			"active":  "true",
+			"another": "c",
+		},
+		{
+			"name":    "Alice",
+			"age":     uint(28),
+			"score":   int64(95),
+			"active":  "false",
+			"another": "d",
+		},
+		{
+			"name":    "Zoe",
+			"age":     uint(28),
+			"score":   int64(95),
+			"active":  true,
+			"another": "d",
+		},
+	}
+
+	tests := []struct {
+		name       string
+		conditions []string
+		wantCount  int
+	}{
+		{
+			name:       "less than with different types",
+			conditions: []string{"age<30"},
+			wantCount:  3,
+		},
+		{
+			name:       "greater than with different types",
+			conditions: []string{"score>90"},
+			wantCount:  3,
+		},
+		{
+			name:       "equal with different types",
+			conditions: []string{"active=true"},
+			wantCount:  3,
+		},
+		{
+			name:       "not equal with different types",
+			conditions: []string{"active!=true"},
+			wantCount:  2,
+		},
+		{
+			name:       "less than or equal",
+			conditions: []string{"age<=30"},
+			wantCount:  4,
+		},
+		{
+			name:       "greater than or equal",
+			conditions: []string{"score>=92"},
+			wantCount:  3,
+		},
+		{
+			name:       "not contains",
+			conditions: []string{"name!~o"},
+			wantCount:  2,
+		},
+		{
+			name:       "unsupported operator",
+			conditions: []string{"name%1"},
+			wantCount:  0,
+		},
+		{
+			name:       "numeric comparison with non-numeric string",
+			conditions: []string{"age>a"},
+			wantCount:  0,
+		},
+		{
+			name:       "equal with nil",
+			conditions: []string{"data="},
+			wantCount:  4,
+		},
+		{
+			name:       "not equal with nil",
+			conditions: []string{"data!="},
+			wantCount:  1,
+		},
+		{
+			name:       "equal with non-string",
+			conditions: []string{"data=[]"},
+			wantCount:  0,
+		},
+		{
+			name:       "numeric comparison with string",
+			conditions: []string{"another>a"},
+			wantCount:  4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conditions, err := ParseConditions(tt.conditions)
+			if err != nil {
+				// For unsupported operator test, we expect an error
+				if tt.name == "unsupported operator" {
+					return
+				}
+				t.Fatalf("ParseConditions() error = %v", err)
+			}
+
+			filter := NewFilter(conditions)
+			result := filter.Apply(rows)
+
+			if len(result) != tt.wantCount {
+				t.Errorf("Filter.Apply() count = %v, want %v", len(result), tt.wantCount)
+			}
+		})
+	}
+}
+
 // Helper functions
 func containsString(s, substr string) bool {
 	return len(s) >= len(substr) && findSubstring(s, substr) >= 0

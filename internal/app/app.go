@@ -178,16 +178,26 @@ func (app *Application) processData(parsed any) (render.Model, error) {
 func (app *Application) normalizeData(parsed any) any {
 	switch v := parsed.(type) {
 	case []any:
+		for i, item := range v {
+			v[i] = app.normalizeData(item)
+		}
 		return v
 	case map[string]any:
+		for key, val := range v {
+			v[key] = app.normalizeData(val)
+		}
 		return v
 	case map[any]any:
-		return parse.ToStringKeyMap(v)
+		stringMap := parse.ToStringKeyMap(v)
+		for key, val := range stringMap {
+			stringMap[key] = app.normalizeData(val)
+		}
+		return stringMap
 	case []map[string]any:
 		// Convert []map[string]any to []any for CSV support
 		result := make([]any, len(v))
 		for i, m := range v {
-			result[i] = m
+			result[i] = app.normalizeData(m)
 		}
 		return result
 	default:

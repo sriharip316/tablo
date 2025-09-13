@@ -214,6 +214,50 @@ func TestApplication_NormalizeData(t *testing.T) {
 	}
 }
 
+func TestNormalizeData_SliceOfAny(t *testing.T) {
+	app := &Application{}
+
+	// Test []any normalization
+	input := []any{map[any]any{"key": "value"}, "foo", []map[string]any{{"bar": "baz"}}}
+	normalized := app.normalizeData(input)
+
+	result, ok := normalized.([]any)
+	if !ok {
+		t.Fatalf("expected []any, got %T", normalized)
+	}
+
+	if len(result) != 3 {
+		t.Fatalf("expected 3 elements, got %d", len(result))
+	}
+
+	first, ok := result[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected first element to be map[string]any, got %T", result[0])
+	}
+
+	if first["key"] != "value" {
+		t.Errorf("expected value 'value', got %v", first["key"])
+	}
+
+	if result[1] != "foo" {
+		t.Errorf("expected second element to be 'foo', got %v", result[1])
+	}
+
+	third, ok := result[2].([]any)
+	if !ok {
+		t.Fatalf("expected third element to be []any, got %T", result[2])
+	}
+
+	fourth, ok := third[0].(map[string]any)
+	if !ok {
+		t.Fatalf("expected fourth element to be map[string]any, got %T", third[0])
+	}
+
+	if fourth["bar"] != "baz" {
+		t.Errorf("expected value 'baz', got %v", fourth["bar"])
+	}
+}
+
 func TestHelperFunctions(t *testing.T) {
 	// Test splitCommaString
 	result := splitCommaString("a, b,, c ")
@@ -231,6 +275,11 @@ func TestHelperFunctions(t *testing.T) {
 	joined := joinStrings([]string{"a", "b", "c"}, ", ")
 	if joined != "a, b, c" {
 		t.Errorf("joinStrings: got %s, want 'a, b, c'", joined)
+	}
+
+	joined = joinStrings([]string{}, ", ")
+	if joined != "" {
+		t.Errorf("joinStrings empty slice: got %s, want ''", joined)
 	}
 
 	// Test trimSpace

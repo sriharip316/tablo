@@ -434,6 +434,15 @@ func TestToNumber(t *testing.T) {
 		ok       bool
 	}{
 		{"int", 42, 42.0, true},
+		{"int8", int8(42), 42.0, true},
+		{"int16", int16(42), 42.0, true},
+		{"int32", int32(42), 42.0, true},
+		{"int64", int64(42), 42.0, true},
+		{"uint", uint(42), 42.0, true},
+		{"uint8", uint8(42), 42.0, true},
+		{"uint16", uint16(42), 42.0, true},
+		{"uint32", uint32(42), 42.0, true},
+		{"uint64", uint64(42), 42.0, true},
 		{"float64", 3.14, 3.14, true},
 		{"float32", float32(2.5), 2.5, true},
 		{"string number", "123.45", 123.45, true},
