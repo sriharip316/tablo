@@ -42,11 +42,12 @@ const (
 
 // Format constants
 const (
-	FormatAuto = "auto"
-	FormatJSON = "json"
-	FormatYAML = "yaml"
-	FormatYML  = "yml"
-	FormatCSV  = "csv"
+	FormatAuto  = "auto"
+	FormatJSON  = "json"
+	FormatYAML  = "yaml"
+	FormatYML   = "yml"
+	FormatCSV   = "csv"
+	FormatJSONL = "jsonl"
 )
 
 // Header case constants

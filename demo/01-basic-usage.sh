@@ -60,6 +60,10 @@ echo -e "\033[1;35m3. Pipe Input (stdin)\033[0m"
 echo "Good for: Command pipelines, API responses"
 demo_cmd "echo '{\"status\":\"success\",\"items\":42}' | $TABLO_BIN"
 
+echo -e "\033[1;35m4. JSON Lines Input\033[0m"
+echo "Good for: Streaming data, large datasets, log processing"
+demo_cmd "echo -e '{\"event\":\"login\",\"user\":\"alice\"}\n{\"event\":\"logout\",\"user\":\"bob\"}' | $TABLO_BIN"
+
 # =============================================================================
 # OUTPUT STYLES
 # =============================================================================
@@ -131,11 +135,22 @@ demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/data/users.json\" --format json"
 echo -e "\033[1;35m3. Explicit YAML Format (--format yaml)\033[0m"
 demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/data/users.yaml\" --format yaml"
 
-echo -e "\033[1;35m4. Force Format on Ambiguous Input\033[0m"
+echo -e "\033[1;35m4. JSON Lines (JSONL) Format\033[0m"
+echo "One JSON value per line - perfect for streaming data:"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/data/users.jsonl\" --select 'name,department'"
+
+echo -e "\033[1;35m5. JSONL with Arrays (Auto-flattening)\033[0m"
+echo "Arrays in JSONL are automatically flattened into individual rows:"
+demo_cmd "$TABLO_BIN --file \"$DEMO_DIR/data/users-array.jsonl\" --select 'name,active'"
+
+echo -e "\033[1;35m6. Explicit JSONL Format (--format jsonl)\033[0m"
+demo_cmd "echo -e '{\"name\":\"Alice\",\"age\":30}\n{\"name\":\"Bob\",\"age\":25}' | $TABLO_BIN --format jsonl"
+
+echo -e "\033[1;35m7. Force Format on Ambiguous Input\033[0m"
 echo "Useful when piping data without clear format indicators:"
 demo_cmd "echo -e 'name: Alice\nage: 30\ndepartment: Engineering' | $TABLO_BIN --format yaml"
 
-echo -e "\033[1;35m5. Format Override\033[0m"
+echo -e "\033[1;35m8. Format Override\033[0m"
 echo "Force YAML parsing on a .json file (if it contains YAML):"
 # This would normally fail, but demonstrates the concept
 echo "# $TABLO_BIN --file some-yaml-data.json --format yaml"

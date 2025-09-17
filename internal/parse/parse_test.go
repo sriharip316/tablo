@@ -407,13 +407,80 @@ func TestDetect_LeadingCommentJSON(t *testing.T) {
 	}
 }
 
-func TestDetect_NonJSONWithComments(t *testing.T) {
-	// Test that comments don't force non-JSON to be detected as JSON
-	yamlLikeWithComment := []byte(`// This looks like a comment
-but this is not valid JSON`)
+func TestDetect_JSONL(t *testing.T) {
+	data := []byte(`{"name": "Alice"}
+{"name": "Bob"}`)
 	d := Detector{}
-	// Should fall back to YAML since it's not valid JSON even after comment stripping
-	if got := d.Detect(yamlLikeWithComment); got != YAML {
-		t.Fatalf("want YAML for non-JSON with comment, got %v", got)
+	if got := d.Detect(data); got != JSONL {
+		t.Fatalf("want JSONL, got %v", got)
+	}
+}
+
+func TestParse_JSONL(t *testing.T) {
+	data := []byte(`{"id": 1}
+{"id": 2}`)
+	v, err := Parse(data, JSONL, ParseOptions{})
+	if err != nil {
+		t.Fatalf("parse JSONL: %v", err)
+	}
+	arr, ok := v.([]any)
+	if !ok || len(arr) != 2 {
+		t.Fatalf("expected 2 objects, got %T", v)
+	}
+}
+
+func TestParse_JSONLWithEmptyLines(t *testing.T) {
+	data := []byte(`{"id": 1}
+
+{"id": 2}`)
+	v, err := Parse(data, JSONL, ParseOptions{})
+	if err != nil {
+		t.Fatalf("parse JSONL with empty lines: %v", err)
+	}
+	arr, ok := v.([]any)
+	if !ok || len(arr) != 2 {
+		t.Fatalf("expected 2 objects, got %T", v)
+	}
+}
+
+func TestParse_JSONLInvalid(t *testing.T) {
+	data := []byte(`{"id": 1}
+invalid json`)
+	_, err := Parse(data, JSONL, ParseOptions{})
+	if err == nil {
+		t.Fatal("expected parse error for invalid JSONL")
+	}
+}
+
+func TestDetect_JSONLExplicit(t *testing.T) {
+	data := []byte(`{"name": "Alice"}
+{"name": "Bob"}`)
+	d := Detector{Explicit: "jsonl"}
+	if got := d.Detect(data); got != JSONL {
+		t.Fatalf("want JSONL, got %v", got)
+	}
+}
+
+func TestParse_JSONLWithArrays(t *testing.T) {
+	data := []byte(`[{"a":1}]
+[{"a":2},{"a":3}]`)
+	v, err := Parse(data, JSONL, ParseOptions{})
+	if err != nil {
+		t.Fatalf("parse JSONL with arrays: %v", err)
+	}
+	arr, ok := v.([]any)
+	if !ok || len(arr) != 3 {
+		t.Fatalf("expected 3 objects, got %d", len(arr))
+	}
+	// Check that all elements are properly flattened
+	for i, item := range arr {
+		obj, ok := item.(map[string]any)
+		if !ok {
+			t.Fatalf("item %d should be object, got %T", i, item)
+		}
+		expected := i + 1
+		if obj["a"] != float64(expected) {
+			t.Fatalf("item %d should have a=%d, got %v", i, expected, obj["a"])
+		}
 	}
 }

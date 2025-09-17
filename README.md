@@ -1,6 +1,6 @@
 # tablo
 
-A CLI tool to render CSV/JSON/YAML as pretty tables. It supports flattening of nested objects, selecting/excluding columns, filtering rows, and multiple output styles.
+A CLI tool to render CSV/JSON/JSONL/YAML as pretty tables. It supports flattening of nested objects, selecting/excluding columns, filtering rows, and multiple output styles.
 
 ## Quick start
 
@@ -91,6 +91,49 @@ Output:
 ┃ Carol Davis   ┃ 92.8  ┃
 ┃ Grace Lee     ┃ 96.3  ┃
 ┗━━━━━━━━━━━━━━━┻━━━━━━━┛
+```
+
+### JSON Lines (JSONL) input
+
+JSONL format allows one JSON value per line. Arrays in JSONL are automatically flattened into individual rows.
+
+Command:
+
+```bash
+tablo -f demo/data/users.jsonl --select name,department
+```
+
+Output:
+
+```
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┓
+┃ name          ┃ department  ┃
+┣━━━━━━━━━━━━━━━╋━━━━━━━━━━━━━┫
+┃ Alice Johnson ┃ Engineering ┃
+┃ Bob Smith     ┃ Marketing   ┃
+┃ Carol Davis   ┃ Engineering ┃
+┃ David Wilson  ┃ Sales       ┃
+┃ Eve Brown     ┃ Design      ┃
+┗━━━━━━━━━━━━━━━┻━━━━━━━━━━━━━┛
+```
+
+JSONL with arrays (each line contains an array that gets flattened):
+
+```bash
+tablo -f demo/data/users-array.jsonl --select name,active
+```
+
+Output:
+
+```
+┏━━━━━━━━━┳━━━━━━━━┓
+┃ name    ┃ active ┃
+┣━━━━━━━━━╋━━━━━━━━┫
+┃ Alice   ┃ true   ┃
+┃ Bob     ┃ false  ┃
+┃ Carol   ┃ true   ┃
+┃ David   ┃ true   ┃
+┗━━━━━━━━━┻━━━━━━━━┛
 ```
 
 ### Array of primitives

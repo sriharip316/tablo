@@ -16,11 +16,12 @@ import (
 type Format string
 
 const (
-	Auto Format = "auto"
-	JSON Format = "json"
-	YAML Format = "yaml"
-	YML  Format = "yml"
-	CSV  Format = "csv"
+	Auto  Format = "auto"
+	JSON  Format = "json"
+	YAML  Format = "yaml"
+	YML   Format = "yml"
+	CSV   Format = "csv"
+	JSONL Format = "jsonl"
 )
 
 type Detector struct {
@@ -37,6 +38,8 @@ func (d Detector) Detect(data []byte) Format {
 			return YAML
 		case "csv":
 			return CSV
+		case "jsonl":
+			return JSONL
 		}
 	}
 	// by extension
@@ -53,6 +56,21 @@ func (d Detector) Detect(data []byte) Format {
 	// sniff
 	trim := bytes.TrimLeft(data, " \t\r\n")
 	if len(trim) > 0 && (trim[0] == '{' || trim[0] == '[') {
+		// Check if this might be JSONL (multiple lines)
+		lines := strings.Split(string(trim), "\n")
+		if len(lines) > 1 {
+			allJSON := true
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line != "" && !strings.HasPrefix(line, "{") && !strings.HasPrefix(line, "[") {
+					allJSON = false
+					break
+				}
+			}
+			if allJSON {
+				return JSONL
+			}
+		}
 		return JSON
 	}
 	// Check for JSON with leading comments
@@ -114,6 +132,8 @@ func Parse(data []byte, f Format, opts ParseOptions) (any, error) {
 		return docs, nil
 	case CSV:
 		return parseCSV(data, opts.CSVNoHeader)
+	case JSONL:
+		return parseJSONL(data)
 	default:
 		return nil, ErrInvalidFormat
 	}
@@ -160,6 +180,31 @@ func parseCSV(data []byte, noHeader bool) (any, error) {
 }
 
 var ErrInvalidFormat = errors.New("invalid format")
+
+// parseJSONL converts JSON Lines data to []any
+func parseJSONL(data []byte) (any, error) {
+	lines := strings.Split(string(data), "\n")
+	var result []any
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var v any
+		if err := json.Unmarshal([]byte(line), &v); err != nil {
+			return nil, err
+		}
+		// If the parsed value is an array, flatten it into individual objects
+		if arr, ok := v.([]any); ok {
+			for _, item := range arr {
+				result = append(result, normalize(item))
+			}
+		} else {
+			result = append(result, normalize(v))
+		}
+	}
+	return result, nil
+}
 
 // normalize YAML maps/ints etc.
 func normalize(v any) any {
