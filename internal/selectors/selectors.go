@@ -3,6 +3,7 @@ package selectors
 import (
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/sriharip316/tablo/internal/flatten"
 )
@@ -11,6 +12,11 @@ type Expr struct {
 	Raw   string
 	parts []segment
 }
+
+var (
+	regexCache   sync.Map // map[string]*regexp.Regexp
+	globReplacer = strings.NewReplacer(".", `\.`, "*", ".*", "?", ".")
+)
 
 type segment struct {
 	pattern *regexp.Regexp // supports * and ? translated
@@ -39,11 +45,17 @@ func compileOne(e string) (Expr, error) {
 	for i, s := range segs {
 		// translate globs to regex
 		if strings.ContainsAny(s, "*?") {
+			if val, ok := regexCache.Load(s); ok {
+				parts[i] = segment{pattern: val.(*regexp.Regexp)}
+				continue
+			}
+
 			re := globToRegex(s)
 			rgx, err := regexp.Compile("^" + re + "$")
 			if err != nil {
 				return Expr{}, err
 			}
+			regexCache.Store(s, rgx)
 			parts[i] = segment{pattern: rgx}
 		} else {
 			parts[i] = segment{literal: s}
@@ -53,8 +65,7 @@ func compileOne(e string) (Expr, error) {
 }
 
 func globToRegex(s string) string {
-	replacer := strings.NewReplacer(".", `\.`, "*", ".*", "?", ".")
-	return replacer.Replace(s)
+	return globReplacer.Replace(s)
 }
 
 // ApplyToKeys filters/sorts keys per include/exclude expressions. If include is nil, keep all.
