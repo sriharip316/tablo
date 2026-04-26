@@ -78,49 +78,66 @@ func FromFlatRows(rows []flatten.FlatKV, headers []string, index bool) Model {
 }
 
 func Render(m Model, o Options) (string, error) {
+	// Early return for empty data
+	if m.Mode == ModeRows && len(m.Rows) == 0 {
+		return "", nil
+	}
+	if m.Mode == ModeObjectKV && len(m.KV) == 0 {
+		return "", nil
+	}
+
+	return renderTabular(m, o), nil
+}
+
+func renderTabular(m Model, o Options) string {
 	t := table.NewWriter()
 
 	// style
 	t.SetStyle(resolveStyle(o))
 
-	// headers
 	if m.Mode == ModeObjectKV {
-		// turn KV into two columns: KEY, VALUE
-		headers := []string{"KEY", "VALUE"}
-		if o.NoHeader {
-			// no headers rendered
-		} else {
-			t.AppendHeader(toHeaderRow(headers, o))
-		}
-		// column configs for ModeObjectKV
-		colCfgs := make([]table.ColumnConfig, 0, len(headers))
-		for i, h := range headers {
-			cfg := table.ColumnConfig{Name: headerCase(h, o.HeaderCase)}
-			if o.MaxColWidth > 0 {
-				cfg.WidthMax = o.MaxColWidth
-				cfg.WidthMaxEnforcer = wrapEnforcer(o)
-			}
-			cfg.Number = i + 1
-			colCfgs = append(colCfgs, cfg)
-		}
-		t.SetColumnConfigs(colCfgs)
+		return renderObjectKV(m, o, t)
+	}
+	return renderRows(m, o, t)
+}
 
-		keys := m.KVOrder
-		if len(keys) == 0 {
-			keys = m.KV.Keys()
-		}
-		for _, k := range keys {
-			v := m.KV[k]
-			t.AppendRow(table.Row{k, formatCell(v, o)})
-		}
-		return chooseRender(t, o), nil
+func renderObjectKV(m Model, o Options, t table.Writer) string {
+	// turn KV into two columns: KEY, VALUE
+	headers := []string{"KEY", "VALUE"}
+	if !o.NoHeader {
+		t.AppendHeader(toHeaderRow(headers, o))
 	}
 
-	// ModeRows
+	// column configs for ModeObjectKV
+	colCfgs := make([]table.ColumnConfig, 0, len(headers))
+	for i, h := range headers {
+		cfg := table.ColumnConfig{Name: headerCase(h, o.HeaderCase)}
+		if o.MaxColWidth > 0 {
+			cfg.WidthMax = o.MaxColWidth
+			cfg.WidthMaxEnforcer = wrapEnforcer(o)
+		}
+		cfg.Number = i + 1
+		colCfgs = append(colCfgs, cfg)
+	}
+	t.SetColumnConfigs(colCfgs)
+
+	keys := m.KVOrder
+	if len(keys) == 0 {
+		keys = m.KV.Keys()
+	}
+	for _, k := range keys {
+		v := m.KV[k]
+		t.AppendRow(table.Row{k, formatCell(v, o)})
+	}
+	return chooseRender(t, o)
+}
+
+func renderRows(m Model, o Options, t table.Writer) string {
 	headers := m.Headers
 	if !o.NoHeader {
 		t.AppendHeader(toHeaderRow(headers, o))
 	}
+
 	// column configs
 	colCfgs := make([]table.ColumnConfig, 0, len(headers))
 	for i, h := range headers {
@@ -129,7 +146,6 @@ func Render(m Model, o Options) (string, error) {
 			cfg.WidthMax = o.MaxColWidth
 			cfg.WidthMaxEnforcer = wrapEnforcer(o)
 		}
-		// set numeric align right by default; handled by library if using SetAutoIndex?
 		cfg.Number = i + 1
 		colCfgs = append(colCfgs, cfg)
 	}
@@ -148,7 +164,7 @@ func Render(m Model, o Options) (string, error) {
 		t.AppendRow(row)
 	}
 
-	return chooseRender(t, o), nil
+	return chooseRender(t, o)
 }
 
 func toHeaderRow(headers []string, o Options) table.Row {
