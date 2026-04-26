@@ -2,6 +2,8 @@ package render
 
 import (
 	stdjson "encoding/json"
+	"fmt"
+	"html"
 	"strconv"
 	"strings"
 
@@ -111,7 +113,7 @@ func renderObjectKV(m Model, o Options, t table.Writer) string {
 	// column configs for ModeObjectKV
 	colCfgs := make([]table.ColumnConfig, 0, len(headers))
 	for i, h := range headers {
-		cfg := table.ColumnConfig{Name: headerCase(h, o.HeaderCase)}
+		cfg := table.ColumnConfig{Name: escapeHTML(headerCase(h, o.HeaderCase), o)}
 		if o.MaxColWidth > 0 {
 			cfg.WidthMax = o.MaxColWidth
 			cfg.WidthMaxEnforcer = wrapEnforcer(o)
@@ -127,7 +129,7 @@ func renderObjectKV(m Model, o Options, t table.Writer) string {
 	}
 	for _, k := range keys {
 		v := m.KV[k]
-		t.AppendRow(table.Row{k, formatCell(v, o)})
+		t.AppendRow(table.Row{escapeHTML(k, o), formatCell(v, o)})
 	}
 	return chooseRender(t, o)
 }
@@ -141,7 +143,7 @@ func renderRows(m Model, o Options, t table.Writer) string {
 	// column configs
 	colCfgs := make([]table.ColumnConfig, 0, len(headers))
 	for i, h := range headers {
-		cfg := table.ColumnConfig{Name: headerCase(h, o.HeaderCase)}
+		cfg := table.ColumnConfig{Name: escapeHTML(headerCase(h, o.HeaderCase), o)}
 		if o.MaxColWidth > 0 {
 			cfg.WidthMax = o.MaxColWidth
 			cfg.WidthMaxEnforcer = wrapEnforcer(o)
@@ -170,7 +172,7 @@ func renderRows(m Model, o Options, t table.Writer) string {
 func toHeaderRow(headers []string, o Options) table.Row {
 	hr := make(table.Row, len(headers))
 	for i, h := range headers {
-		hr[i] = headerCase(h, o.HeaderCase)
+		hr[i] = escapeHTML(headerCase(h, o.HeaderCase), o)
 	}
 	return hr
 }
@@ -220,6 +222,8 @@ func resolveStyle(o Options) table.Style {
 	case "html":
 		// style doesn't matter for HTML output; choose simple
 		s = table.StyleDefault
+		// Prevent double-escaping since we manually escape content using escapeHTML
+		s.HTML.EscapeText = false
 	case "csv":
 		// style doesn't matter for CSV output; choose simple
 		s = table.StyleDefault
@@ -281,10 +285,17 @@ func wrapEnforcer(o Options) table.WidthEnforcer {
 	}
 }
 
+func escapeHTML(s string, o Options) string {
+	if strings.ToLower(o.Style) == "html" {
+		return html.EscapeString(s)
+	}
+	return s
+}
+
 func formatCell(v any, o Options) any {
 	if v == nil {
 		if o.NullStr != "" {
-			return o.NullStr
+			return escapeHTML(o.NullStr, o)
 		}
 		return nil
 	}
@@ -293,9 +304,9 @@ func formatCell(v any, o Options) any {
 		if o.BoolStr != "" && strings.Contains(o.BoolStr, ":") {
 			parts := strings.SplitN(o.BoolStr, ":", 2)
 			if t {
-				return parts[0]
+				return escapeHTML(parts[0], o)
 			}
-			return parts[1]
+			return escapeHTML(parts[1], o)
 		}
 		return t
 	case float64:
@@ -304,7 +315,7 @@ func formatCell(v any, o Options) any {
 			if t == 0 {
 				t = 0
 			}
-			return strconv.FormatFloat(t, 'f', o.Precision, 64)
+			return escapeHTML(strconv.FormatFloat(t, 'f', o.Precision, 64), o)
 		}
 		return t
 	case float32:
@@ -313,16 +324,20 @@ func formatCell(v any, o Options) any {
 			if f == 0 {
 				f = 0
 			}
-			return strconv.FormatFloat(f, 'f', o.Precision, 64)
+			return escapeHTML(strconv.FormatFloat(f, 'f', o.Precision, 64), o)
 		}
 		return t
 	case stdjson.Number:
 		if o.Precision >= 0 {
 			if f, err := t.Float64(); err == nil {
-				return strconv.FormatFloat(f, 'f', o.Precision, 64)
+				return escapeHTML(strconv.FormatFloat(f, 'f', o.Precision, 64), o)
 			}
 		}
-		return t.String()
+		return escapeHTML(t.String(), o)
+	case string:
+		return escapeHTML(t, o)
+	case fmt.Stringer:
+		return escapeHTML(t.String(), o)
 	default:
 		return t
 	}

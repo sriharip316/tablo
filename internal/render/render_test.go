@@ -10,6 +10,49 @@ import (
 	"github.com/sriharip316/tablo/internal/flatten"
 )
 
+func TestRender_HTML_XSS(t *testing.T) {
+	// Payload in keys and values
+	kv := flatten.FlatKV{"<script>alert('key')</script>": "<script>alert('value')</script>"}
+	m := Model{Mode: ModeObjectKV, KV: kv}
+
+	out, err := Render(m, Options{Style: "html"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(out, "<script>") {
+		t.Fatalf("expected output to escape XSS payloads, got: %s", out)
+	}
+
+	if !strings.Contains(out, "&lt;script&gt;alert(&#39;key&#39;)&lt;/script&gt;") {
+		t.Fatalf("expected output to contain escaped key, got: %s", out)
+	}
+
+	if !strings.Contains(out, "&lt;script&gt;alert(&#39;value&#39;)&lt;/script&gt;") {
+		t.Fatalf("expected output to contain escaped value, got: %s", out)
+	}
+
+	// Also check mode rows
+	rows := []flatten.FlatKV{{"<script>header</script>": "<script>cell</script>"}}
+	mRows := FromFlatRows(rows, []string{"<script>header</script>"}, false)
+	outRows, errRows := Render(mRows, Options{Style: "html"})
+	if errRows != nil {
+		t.Fatal(errRows)
+	}
+
+	if strings.Contains(outRows, "<script>") {
+		t.Fatalf("expected mode rows output to escape XSS payloads, got: %s", outRows)
+	}
+
+	if !strings.Contains(outRows, "&lt;script&gt;header&lt;/script&gt;") {
+		t.Fatalf("expected output to contain escaped header, got: %s", outRows)
+	}
+
+	if !strings.Contains(outRows, "&lt;script&gt;cell&lt;/script&gt;") {
+		t.Fatalf("expected output to contain escaped cell, got: %s", outRows)
+	}
+}
+
 func TestRenderObjectKV(t *testing.T) {
 	kv := flatten.FlatKV{"a": 1, "b.c": 2}
 	m := Model{Mode: ModeObjectKV, KV: kv}
