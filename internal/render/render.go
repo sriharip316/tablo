@@ -2,6 +2,8 @@ package render
 
 import (
 	stdjson "encoding/json"
+	"fmt"
+	"html"
 	"strconv"
 	"strings"
 
@@ -109,9 +111,14 @@ func Render(m Model, o Options) (string, error) {
 		if len(keys) == 0 {
 			keys = m.KV.Keys()
 		}
+		isHTML := strings.ToLower(o.Style) == "html"
 		for _, k := range keys {
 			v := m.KV[k]
-			t.AppendRow(table.Row{k, formatCell(v, o)})
+			key := k
+			if isHTML {
+				key = html.EscapeString(key)
+			}
+			t.AppendRow(table.Row{key, formatCell(v, o)})
 		}
 		return chooseRender(t, o), nil
 	}
@@ -153,8 +160,13 @@ func Render(m Model, o Options) (string, error) {
 
 func toHeaderRow(headers []string, o Options) table.Row {
 	hr := make(table.Row, len(headers))
+	isHTML := strings.ToLower(o.Style) == "html"
 	for i, h := range headers {
-		hr[i] = headerCase(h, o.HeaderCase)
+		val := headerCase(h, o.HeaderCase)
+		if isHTML {
+			val = html.EscapeString(val)
+		}
+		hr[i] = val
 	}
 	return hr
 }
@@ -266,8 +278,12 @@ func wrapEnforcer(o Options) table.WidthEnforcer {
 }
 
 func formatCell(v any, o Options) any {
+	isHTML := strings.ToLower(o.Style) == "html"
 	if v == nil {
 		if o.NullStr != "" {
+			if isHTML {
+				return html.EscapeString(o.NullStr)
+			}
 			return o.NullStr
 		}
 		return nil
@@ -276,10 +292,16 @@ func formatCell(v any, o Options) any {
 	case bool:
 		if o.BoolStr != "" && strings.Contains(o.BoolStr, ":") {
 			parts := strings.SplitN(o.BoolStr, ":", 2)
+			res := ""
 			if t {
-				return parts[0]
+				res = parts[0]
+			} else {
+				res = parts[1]
 			}
-			return parts[1]
+			if isHTML {
+				return html.EscapeString(res)
+			}
+			return res
 		}
 		return t
 	case float64:
@@ -301,13 +323,28 @@ func formatCell(v any, o Options) any {
 		}
 		return t
 	case stdjson.Number:
+		res := ""
 		if o.Precision >= 0 {
 			if f, err := t.Float64(); err == nil {
-				return strconv.FormatFloat(f, 'f', o.Precision, 64)
+				res = strconv.FormatFloat(f, 'f', o.Precision, 64)
 			}
 		}
-		return t.String()
+		if res == "" {
+			res = t.String()
+		}
+		if isHTML {
+			return html.EscapeString(res)
+		}
+		return res
 	default:
+		if isHTML {
+			if s, ok := t.(string); ok {
+				return html.EscapeString(s)
+			}
+			if s, ok := t.(fmt.Stringer); ok {
+				return html.EscapeString(s.String())
+			}
+		}
 		return t
 	}
 }
