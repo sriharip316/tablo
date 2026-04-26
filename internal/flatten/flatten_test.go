@@ -60,13 +60,21 @@ func TestFlattenRows_Mixed(t *testing.T) {
 	arr := []any{
 		map[string]any{"a": 1},
 		2,
+		[]any{"x", "y"},
+		map[string]any{"b": 2},
 	}
-	rows := FlattenRows(arr, Options{Enabled: true})
-	if len(rows) != 2 {
-		t.Fatalf("want 2 rows")
+	rows := FlattenRows(arr, Options{Enabled: true, FlattenSimpleArray: true, MaxDepth: -1})
+	if len(rows) != 4 {
+		t.Fatalf("want 4 rows")
 	}
 	if rows[1]["VALUE"] != 2 {
 		t.Fatalf("second row VALUE mismatch: %+v", rows[1])
+	}
+	if rows[2]["VALUE"] != "x, y" {
+		t.Fatalf("third row VALUE mismatch: %+v", rows[2])
+	}
+	if rows[3]["b"] != 2 {
+		t.Fatalf("fourth row mismatch: %+v", rows[3])
 	}
 }
 
@@ -215,5 +223,72 @@ func TestFlatten_DivePaths_ArrayOfObjects(t *testing.T) {
 	// keep should be stringified (array of objects but not in DivePaths)
 	if s, ok := kv["keep"].(string); !ok || !strings.Contains(s, `"x":1`) {
 		t.Fatalf("expected stringified keep array, got %#v", kv["keep"])
+	}
+}
+
+func TestMaybeStringify(t *testing.T) {
+	tests := []struct {
+		name     string
+		val      any
+		opts     Options
+		expected any
+	}{
+		{
+			name:     "Scalar int",
+			val:      123,
+			opts:     Options{},
+			expected: 123,
+		},
+		{
+			name:     "Scalar string",
+			val:      "hello",
+			opts:     Options{},
+			expected: "hello",
+		},
+		{
+			name:     "Map",
+			val:      map[string]any{"a": 1},
+			opts:     Options{},
+			expected: `{"a":1}`,
+		},
+		{
+			name:     "Slice - no flatten",
+			val:      []any{1, "b"},
+			opts:     Options{FlattenSimpleArray: false},
+			expected: `[1,"b"]`,
+		},
+		{
+			name:     "Slice - flatten",
+			val:      []any{1, "b"},
+			opts:     Options{FlattenSimpleArray: true},
+			expected: "1, b",
+		},
+		{
+			name:     "Nil",
+			val:      nil,
+			opts:     Options{},
+			expected: nil,
+		},
+		{
+			name:     "Empty map",
+			val:      map[string]any{},
+			opts:     Options{},
+			expected: "{}",
+		},
+		{
+			name:     "Empty slice",
+			val:      []any{},
+			opts:     Options{FlattenSimpleArray: true},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := maybeStringify(tt.val, tt.opts)
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("maybeStringify() = %v, want %v", got, tt.expected)
+			}
+		})
 	}
 }
