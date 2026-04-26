@@ -14,7 +14,7 @@ type Expr struct {
 }
 
 var (
-	regexCache    sync.Map // map[string]*regexp.Regexp
+	regexCache   sync.Map // map[string]*regexp.Regexp
 	globReplacer = strings.NewReplacer(".", `\.`, "*", ".*", "?", ".")
 )
 
