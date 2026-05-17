@@ -361,3 +361,63 @@ func TestHeaderCaseAdditional(t *testing.T) {
 		t.Fatalf("original headerCase failed: %s", got)
 	}
 }
+
+func TestToHeaderRow(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers []string
+		options Options
+		want    table.Row
+	}{
+		{
+			name:    "basic",
+			headers: []string{"id", "name"},
+			options: Options{},
+			want:    table.Row{"id", "name"},
+		},
+		{
+			name:    "upper case",
+			headers: []string{"id", "name"},
+			options: Options{HeaderCase: "upper"},
+			want:    table.Row{"ID", "NAME"},
+		},
+		{
+			name:    "lower case",
+			headers: []string{"ID", "NAME"},
+			options: Options{HeaderCase: "lower"},
+			want:    table.Row{"id", "name"},
+		},
+		{
+			name:    "title case",
+			headers: []string{"user_id", "user_name"},
+			options: Options{HeaderCase: "title"},
+			want:    table.Row{"User Id", "User Name"},
+		},
+		{
+			name:    "html escape",
+			headers: []string{"<id>", "name & age"},
+			options: Options{Style: "html"},
+			want:    table.Row{"&lt;id&gt;", "name &amp; age"},
+		},
+		{
+			name:    "empty headers",
+			headers: []string{},
+			options: Options{},
+			want:    table.Row{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := toHeaderRow(tt.headers, tt.options)
+			if len(got) != len(tt.want) {
+				t.Fatalf("got len %d, want %d", len(got), len(tt.want))
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("got[%d] = %v, want %v", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
