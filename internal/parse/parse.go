@@ -99,37 +99,9 @@ type ParseOptions struct {
 func Parse(data []byte, f Format, opts ParseOptions) (any, error) {
 	switch f {
 	case JSON:
-		// Strip comments from JSON using jsonc library
-		cleanJSON := jsonc.ToJSON(data)
-		var v any
-		dec := json.NewDecoder(bytes.NewReader(cleanJSON))
-		dec.UseNumber()
-		if err := dec.Decode(&v); err != nil {
-			// try YAML fallback in auto-like cases
-			return nil, err
-		}
-		return normalize(v), nil
+		return parseJSON(data)
 	case YAML, YML, Auto:
-		// YAML can have multi-docs
-		dec := yaml.NewDecoder(bytes.NewReader(data))
-		var docs []any
-		for {
-			var v any
-			if err := dec.Decode(&v); err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				return nil, err
-			}
-			if v == nil {
-				continue
-			}
-			docs = append(docs, normalize(v))
-		}
-		if len(docs) == 1 {
-			return docs[0], nil
-		}
-		return docs, nil
+		return parseYAML(data)
 	case CSV:
 		return parseCSV(data, opts.CSVNoHeader)
 	case JSONL:
@@ -137,6 +109,43 @@ func Parse(data []byte, f Format, opts ParseOptions) (any, error) {
 	default:
 		return nil, ErrInvalidFormat
 	}
+}
+
+// parseYAML handles multi-document YAML parsing
+func parseYAML(data []byte) (any, error) {
+	// YAML can have multi-docs
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	var docs []any
+	for {
+		var v any
+		if err := dec.Decode(&v); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return nil, err
+		}
+		if v == nil {
+			continue
+		}
+		docs = append(docs, normalize(v))
+	}
+	if len(docs) == 1 {
+		return docs[0], nil
+	}
+	return docs, nil
+}
+
+// parseJSON strips comments and parses JSON data
+func parseJSON(data []byte) (any, error) {
+	// Strip comments from JSON using jsonc library
+	cleanJSON := jsonc.ToJSON(data)
+	var v any
+	dec := json.NewDecoder(bytes.NewReader(cleanJSON))
+	dec.UseNumber()
+	if err := dec.Decode(&v); err != nil {
+		return nil, err
+	}
+	return normalize(v), nil
 }
 
 // parseCSV converts CSV data to []map[string]any
