@@ -135,7 +135,7 @@ func (app *Application) validateConfig() error {
 }
 
 func (app *Application) readInput() ([]byte, error) {
-	reader := input.NewReader(app.config.Input.String, app.config.Input.File, app.stdin)
+	reader := input.NewReader(app.config.Input.String, app.config.Input.File, app.stdin, MaxInputSizeBytes)
 	return reader.Read()
 }
 
