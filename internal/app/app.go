@@ -3,6 +3,7 @@ package app
 import (
 	"io"
 	"os"
+	"strings"
 
 	"github.com/sriharip316/tablo/internal/filter"
 	"github.com/sriharip316/tablo/internal/flatten"
@@ -456,27 +457,8 @@ func isSpace(c byte) bool {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
 }
 
-func joinStrings(strings []string, sep string) string {
-	if len(strings) == 0 {
-		return ""
-	}
-	if len(strings) == 1 {
-		return strings[0]
-	}
-
-	totalLen := len(sep) * (len(strings) - 1)
-	for _, s := range strings {
-		totalLen += len(s)
-	}
-
-	result := make([]byte, 0, totalLen)
-	result = append(result, strings[0]...)
-	for _, s := range strings[1:] {
-		result = append(result, sep...)
-		result = append(result, s...)
-	}
-
-	return string(result)
+func joinStrings(strSlice []string, sep string) string {
+	return strings.Join(strSlice, sep)
 }
 
 func endsWithNewline(s string) bool {
