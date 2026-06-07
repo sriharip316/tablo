@@ -71,6 +71,81 @@ func TestToStringKeyMap(t *testing.T) {
 	}
 }
 
+func Test_parseCSV(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		noHeader bool
+		wantErr  bool
+		want     []map[string]any
+	}{
+		{
+			name:     "valid with headers",
+			data:     []byte("name,age,city\nJohn,30,NYC\nJane,25,LA"),
+			noHeader: false,
+			wantErr:  false,
+			want: []map[string]any{
+				{"name": "John", "age": "30", "city": "NYC"},
+				{"name": "Jane", "age": "25", "city": "LA"},
+			},
+		},
+		{
+			name:     "valid without headers",
+			data:     []byte("John,30,NYC\nJane,25,LA"),
+			noHeader: true,
+			wantErr:  false,
+			want: []map[string]any{
+				{"col0": "John", "col1": "30", "col2": "NYC"},
+				{"col0": "Jane", "col1": "25", "col2": "LA"},
+			},
+		},
+		{
+			name:     "empty CSV",
+			data:     []byte(""),
+			noHeader: false,
+			wantErr:  false,
+			want:     []map[string]any{},
+		},
+		{
+			name:     "invalid CSV",
+			data:     []byte("name,age\n\"John,30"),
+			noHeader: false,
+			wantErr:  true,
+		},
+		{
+			name:     "header only",
+			data:     []byte("name,age,city"),
+			noHeader: false,
+			wantErr:  false,
+			want:     []map[string]any(nil),
+		},
+		{
+			name:     "row with more columns than header (default csv.Reader behavior ignores extra fields or errors, but let's test our map logic)",
+			data:     []byte("name,age\nJohn,30,NYC"),
+			noHeader: false,
+			wantErr:  true, // encoding/csv returns ErrFieldCount
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseCSV(tt.data, tt.noHeader)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("parseCSV() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				gotArr, ok := got.([]map[string]any)
+				if !ok {
+					t.Fatalf("parseCSV() returned %T, want []map[string]any", got)
+				}
+				if !reflect.DeepEqual(gotArr, tt.want) {
+					t.Errorf("parseCSV() = %v, want %v", gotArr, tt.want)
+				}
+			}
+		})
+	}
+}
+
 func TestNormalizeNested(t *testing.T) {
 	in := map[any]any{"m": map[any]any{"k": 1}, "arr": []any{map[any]any{"z": 2}}}
 	v := normalize(in)
