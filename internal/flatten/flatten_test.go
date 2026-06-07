@@ -78,12 +78,44 @@ func TestFlattenRows_Mixed(t *testing.T) {
 	}
 }
 
-func TestFlatKV_KeysSorted(t *testing.T) {
-	kv := FlatKV{"b": 1, "a": 2}
-	got := kv.Keys()
-	exp := []string{"a", "b"}
-	if !reflect.DeepEqual(got, exp) {
-		t.Fatalf("keys order: %v", got)
+func TestFlatKV_Keys(t *testing.T) {
+	tests := []struct {
+		name string
+		kv   FlatKV
+		want []string
+	}{
+		{
+			name: "Nil map",
+			kv:   nil,
+			want: []string{},
+		},
+		{
+			name: "Empty map",
+			kv:   FlatKV{},
+			want: []string{},
+		},
+		{
+			name: "Single key",
+			kv:   FlatKV{"a": 1},
+			want: []string{"a"},
+		},
+		{
+			name: "Multiple keys sorted",
+			kv:   FlatKV{"z": 1, "a": 2, "c": 3},
+			want: []string{"a", "c", "z"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.kv.Keys()
+			if len(got) == 0 && len(tt.want) == 0 {
+				return // Both empty is fine, reflect.DeepEqual can fail on []string(nil) vs []string{}
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FlatKV.Keys() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
