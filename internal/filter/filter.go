@@ -5,8 +5,13 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/sriharip316/tablo/internal/flatten"
+)
+
+var (
+	regexCache sync.Map // map[string]*regexp.Regexp
 )
 
 // Operator represents comparison operators for filtering
@@ -103,11 +108,16 @@ func ParseCondition(expr string) (Condition, error) {
 
 			// Compile regex for match operators
 			if opDef.op == OpMatch || opDef.op == OpNotMatch {
-				regex, err := regexp.Compile(value)
-				if err != nil {
-					return Condition{}, fmt.Errorf("invalid regex pattern %q: %w", value, err)
+				if cached, ok := regexCache.Load(value); ok {
+					condition.regex = cached.(*regexp.Regexp)
+				} else {
+					regex, err := regexp.Compile(value)
+					if err != nil {
+						return Condition{}, fmt.Errorf("invalid regex pattern %q: %w", value, err)
+					}
+					regexCache.Store(value, regex)
+					condition.regex = regex
 				}
-				condition.regex = regex
 			}
 
 			return condition, nil
