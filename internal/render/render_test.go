@@ -394,10 +394,11 @@ func TestToHeaderRow(t *testing.T) {
 			want:    table.Row{"User Id", "User Name"},
 		},
 		{
-			name:    "html escape",
+			name:    "html no manual escape",
 			headers: []string{"<id>", "name & age"},
 			options: Options{Style: "html"},
-			want:    table.Row{"&lt;id&gt;", "name &amp; age"},
+			// Headers are NOT escaped by toHeaderRow - the go-pretty library handles escaping during RenderHTML()
+			want: table.Row{"<id>", "name & age"},
 		},
 		{
 			name:    "empty headers",

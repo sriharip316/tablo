@@ -3,7 +3,6 @@ package render
 import (
 	stdjson "encoding/json"
 	"fmt"
-	"html"
 	"strconv"
 	"strings"
 
@@ -222,8 +221,6 @@ func resolveStyle(o Options) table.Style {
 	case "html":
 		// style doesn't matter for HTML output; choose simple
 		s = table.StyleDefault
-		// Prevent double-escaping since we manually escape content using escapeHTML
-		s.HTML.EscapeText = false
 	case "csv":
 		// style doesn't matter for CSV output; choose simple
 		s = table.StyleDefault
@@ -286,9 +283,8 @@ func wrapEnforcer(o Options) table.WidthEnforcer {
 }
 
 func escapeHTML(s string, o Options) string {
-	if strings.ToLower(o.Style) == "html" {
-		return html.EscapeString(s)
-	}
+	// The go-pretty library automatically escapes HTML content when rendering HTML tables
+	// So we don't need to manually escape here to avoid double-escaping
 	return s
 }
 

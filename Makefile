@@ -9,7 +9,7 @@ DIRTY = $(shell test -z "$$(git status --porcelain 2>/dev/null)" && echo "" || e
 
 # Derive version: if TAG is not empty use it; else use dev-<COMMIT_HASH>; final fallback 'dev'.
 VERSION = $(if $(TAG),$(TAG)$(DIRTY),$(if $(COMMIT_HASH),dev-$(COMMIT_HASH)$(DIRTY),dev))
-MIN_COVER ?= 70.0
+MIN_COVER ?= 80.0
 OS_ARCHES := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
 BINARY := tablo
 BIN_DIR := bin
