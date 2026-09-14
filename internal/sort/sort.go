@@ -1,6 +1,7 @@
 package sort
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -186,6 +187,10 @@ func toNumber(v any) (float64, bool) {
 		return float64(val), true
 	case uint64:
 		return float64(val), true
+	case json.Number:
+		if f, err := val.Float64(); err == nil {
+			return f, true
+		}
 	case string:
 		if f, err := strconv.ParseFloat(val, 64); err == nil {
 			return f, true

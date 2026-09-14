@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -82,8 +83,11 @@ func (e *AppError) Unwrap() error {
 
 // Is checks if the error matches a specific error code
 func (e *AppError) Is(target error) bool {
+	if e == nil || target == nil {
+		return e == target
+	}
 	if t, ok := target.(*AppError); ok {
-		return e.Code == t.Code
+		return t != nil && e.Code == t.Code
 	}
 	return false
 }
@@ -137,18 +141,10 @@ func IsParseError(err error) bool {
 
 // AsAppError extracts an AppError from an error chain
 func AsAppError(err error, target **AppError) bool {
-	for err != nil {
-		if appErr, ok := err.(*AppError); ok {
-			*target = appErr
-			return true
-		}
-		if unwrapper, ok := err.(interface{ Unwrap() error }); ok {
-			err = unwrapper.Unwrap()
-		} else {
-			break
-		}
+	if target == nil {
+		return false
 	}
-	return false
+	return errors.As(err, target)
 }
 
 // GetExitCode extracts the appropriate exit code from an error

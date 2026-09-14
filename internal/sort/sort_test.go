@@ -1,6 +1,7 @@
 package sort
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -192,6 +193,22 @@ func TestSorter_Sort(t *testing.T) {
 				{"user.name": "Alice", "user.age": 30},
 				{"user.name": "Bob", "user.age": 25},
 				{"user.name": "Charlie", "user.age": 35},
+			},
+		},
+		{
+			name: "sort by json.Number column numeric order",
+			options: Options{
+				Columns: []string{"val"},
+			},
+			rows: []flatten.FlatKV{
+				{"val": json.Number("20")},
+				{"val": json.Number("100")},
+				{"val": json.Number("3")},
+			},
+			expected: []flatten.FlatKV{
+				{"val": json.Number("3")},
+				{"val": json.Number("20")},
+				{"val": json.Number("100")},
 			},
 		},
 	}
@@ -447,6 +464,8 @@ func TestToNumber(t *testing.T) {
 		{"float32", float32(2.5), 2.5, true},
 		{"string number", "123.45", 123.45, true},
 		{"string invalid", "hello", 0, false},
+		{"json.Number valid", json.Number("123.45"), 123.45, true},
+		{"json.Number invalid", json.Number("invalid"), 0, false},
 		{"bool", true, 0, false},
 		{"nil", nil, 0, false},
 	}

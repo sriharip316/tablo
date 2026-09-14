@@ -84,7 +84,7 @@ func (d Detector) Detect(data []byte) Format {
 	}
 	// Check for CSV by looking for comma-separated values in first line
 	if len(trim) > 0 {
-		firstLine := strings.Split(string(trim), "\n")[0]
+		firstLine, _, _ := strings.Cut(string(trim), "\n")
 		if strings.Contains(firstLine, ",") && !strings.Contains(firstLine, "{") && !strings.Contains(firstLine, ":") {
 			return CSV
 		}
@@ -150,7 +150,7 @@ func parseJSON(data []byte) (any, error) {
 
 // parseCSV converts CSV data to []map[string]any
 func parseCSV(data []byte, noHeader bool) (any, error) {
-	reader := csv.NewReader(strings.NewReader(string(data)))
+	reader := csv.NewReader(bytes.NewReader(data))
 	records, err := reader.ReadAll()
 	if err != nil {
 		return nil, err

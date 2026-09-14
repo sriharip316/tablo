@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -95,36 +96,50 @@ func ParseCondition(expr string) (Condition, error) {
 		{OpContains, "~"},
 	}
 
+	// Find the earliest matching operator in the expression
+	earliestIdx := -1
+	var matchedOp Operator
+	var matchedOpStr string
+
 	for _, opDef := range operators {
-		if idx := strings.Index(expr, opDef.str); idx > 0 {
-			path := strings.TrimSpace(expr[:idx])
-			value := strings.TrimSpace(expr[idx+len(opDef.str):])
-
-			condition := Condition{
-				Path:     path,
-				Operator: opDef.op,
-				Value:    value,
+		idx := strings.Index(expr, opDef.str)
+		if idx > 0 {
+			if earliestIdx == -1 || idx < earliestIdx || (idx == earliestIdx && len(opDef.str) > len(matchedOpStr)) {
+				earliestIdx = idx
+				matchedOp = opDef.op
+				matchedOpStr = opDef.str
 			}
-
-			// Compile regex for match operators
-			if opDef.op == OpMatch || opDef.op == OpNotMatch {
-				if cached, ok := regexCache.Load(value); ok {
-					condition.regex = cached.(*regexp.Regexp)
-				} else {
-					regex, err := regexp.Compile(value)
-					if err != nil {
-						return Condition{}, fmt.Errorf("invalid regex pattern %q: %w", value, err)
-					}
-					regexCache.Store(value, regex)
-					condition.regex = regex
-				}
-			}
-
-			return condition, nil
 		}
 	}
 
-	return Condition{}, fmt.Errorf("invalid filter expression %q: no valid operator found", expr)
+	if earliestIdx == -1 {
+		return Condition{}, fmt.Errorf("invalid filter expression %q: no valid operator found", expr)
+	}
+
+	path := strings.TrimSpace(expr[:earliestIdx])
+	value := strings.TrimSpace(expr[earliestIdx+len(matchedOpStr):])
+
+	condition := Condition{
+		Path:     path,
+		Operator: matchedOp,
+		Value:    value,
+	}
+
+	// Compile regex for match operators
+	if matchedOp == OpMatch || matchedOp == OpNotMatch {
+		if cached, ok := regexCache.Load(value); ok {
+			condition.regex = cached.(*regexp.Regexp)
+		} else {
+			regex, err := regexp.Compile(value)
+			if err != nil {
+				return Condition{}, fmt.Errorf("invalid regex pattern %q: %w", value, err)
+			}
+			regexCache.Store(value, regex)
+			condition.regex = regex
+		}
+	}
+
+	return condition, nil
 }
 
 // ParseConditions parses multiple filter condition strings
@@ -185,6 +200,8 @@ func (f *Filter) matchesCondition(row flatten.FlatKV, condition Condition) bool 
 			return condition.Value == "" || condition.Value == "null"
 		case OpNotEqual:
 			return condition.Value != "" && condition.Value != "null"
+		case OpNotContains, OpNotMatch:
+			return true
 		default:
 			return false
 		}
@@ -301,7 +318,7 @@ func (f *Filter) isNumeric(value any) bool {
 	switch value.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return true
-	case float32, float64:
+	case float32, float64, json.Number:
 		return true
 	default:
 		return false
@@ -341,6 +358,11 @@ func (f *Filter) toFloat64(value any) float64 {
 		return float64(v)
 	case float64:
 		return v
+	case json.Number:
+		if n, err := v.Float64(); err == nil {
+			return n
+		}
+		return 0
 	default:
 		// Try to parse as string
 		if s := f.valueToString(value); s != "" {

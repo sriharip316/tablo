@@ -14,8 +14,7 @@ type Expr struct {
 }
 
 var (
-	regexCache   sync.Map // map[string]*regexp.Regexp
-	globReplacer = strings.NewReplacer(".", `\.`, "*", ".*", "?", ".")
+	regexCache sync.Map // map[string]*regexp.Regexp
 )
 
 type segment struct {
@@ -65,7 +64,22 @@ func compileOne(e string) (Expr, error) {
 }
 
 func globToRegex(s string) string {
-	return globReplacer.Replace(s)
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch c {
+		case '*':
+			b.WriteString(".*")
+		case '?':
+			b.WriteString(".")
+		case '.', '+', '(', ')', '[', ']', '{', '}', '^', '$', '|', '\\':
+			b.WriteByte('\\')
+			b.WriteByte(c)
+		default:
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 // ApplyToKeys filters/sorts keys per include/exclude expressions. If include is nil, keep all.

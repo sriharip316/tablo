@@ -57,8 +57,8 @@ func FlattenObject(obj any, o Options) FlatKV {
 				walk(p, val, depth+1)
 			}
 		case []any:
-			// only flatten arrays of objects
-			allObj := true
+			// only flatten non-empty arrays of objects
+			allObj := len(vv) > 0
 			for _, it := range vv {
 				if _, ok := it.(map[string]any); !ok {
 					allObj = false
@@ -66,15 +66,22 @@ func FlattenObject(obj any, o Options) FlatKV {
 				}
 			}
 			if !allObj {
+				pKey := prefix
+				if pKey == "" {
+					pKey = "VALUE"
+				}
 				if o.FlattenSimpleArray {
-					out[prefix] = simpleArrayToCSV(vv)
+					out[pKey] = simpleArrayToCSV(vv)
 				} else {
-					out[prefix] = stringify(vv)
+					out[pKey] = stringify(vv)
 				}
 				return
 			}
 			for i, it := range vv {
-				p := prefix + "." + strconv.Itoa(i)
+				p := strconv.Itoa(i)
+				if prefix != "" {
+					p = prefix + "." + p
+				}
 				walk(p, it, depth+1)
 			}
 		default:

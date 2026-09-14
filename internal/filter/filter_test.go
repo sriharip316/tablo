@@ -1,6 +1,7 @@
 package filter
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/sriharip316/tablo/internal/flatten"
@@ -73,6 +74,16 @@ func TestParseCondition(t *testing.T) {
 			name: "whitespace handling",
 			expr: " name = John Doe ",
 			want: Condition{Path: "name", Operator: OpEqual, Value: "John Doe"},
+		},
+		{
+			name: "operator inside value",
+			expr: "title=hello!=world",
+			want: Condition{Path: "title", Operator: OpEqual, Value: "hello!=world"},
+		},
+		{
+			name: "operator inside value with url",
+			expr: "url=http://example.com?a>=b",
+			want: Condition{Path: "url", Operator: OpEqual, Value: "http://example.com?a>=b"},
 		},
 		{
 			name:        "empty expression",
@@ -343,6 +354,18 @@ func TestFilter_MissingFields(t *testing.T) {
 			wantCount: 1,
 			wantNames: []string{"John"},
 		},
+		{
+			name:      "not contains with missing field",
+			condition: "age!~30",
+			wantCount: 1,
+			wantNames: []string{"Jane"},
+		},
+		{
+			name:      "not match regex with missing field",
+			condition: "age!=~\\d+",
+			wantCount: 1,
+			wantNames: []string{"Jane"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -453,7 +476,7 @@ func TestFilter_Apply_Coverage(t *testing.T) {
 			"age":     30,
 			"score":   85.5,
 			"active":  true,
-			"data":    []interface{}{1, "a"},
+			"data":    []any{1, "a"},
 			"another": "a",
 		},
 		{
@@ -575,6 +598,54 @@ func TestFilter_Apply_Coverage(t *testing.T) {
 
 			if len(result) != tt.wantCount {
 				t.Errorf("Filter.Apply() count = %v, want %v", len(result), tt.wantCount)
+			}
+		})
+	}
+}
+
+func TestFilter_Apply_JSONNumber(t *testing.T) {
+	rows := []flatten.FlatKV{
+		{"name": "Item1", "val": json.Number("42")},
+		{"name": "Item2", "val": json.Number("100.5")},
+		{"name": "Item3", "val": json.Number("3.14")},
+	}
+
+	tests := []struct {
+		name      string
+		condition string
+		wantNames []string
+	}{
+		{
+			name:      "equality with float representation",
+			condition: "val=42.0",
+			wantNames: []string{"Item1"},
+		},
+		{
+			name:      "greater than comparison",
+			condition: "val>40",
+			wantNames: []string{"Item1", "Item2"},
+		},
+		{
+			name:      "less than comparison",
+			condition: "val<10",
+			wantNames: []string{"Item3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conds, err := ParseConditions([]string{tt.condition})
+			if err != nil {
+				t.Fatalf("unexpected parse error: %v", err)
+			}
+			flt := NewFilter(conds)
+			res := flt.Apply(rows)
+			var gotNames []string
+			for _, r := range res {
+				gotNames = append(gotNames, r["name"].(string))
+			}
+			if !slicesEqual(gotNames, tt.wantNames) {
+				t.Errorf("got %v, want %v", gotNames, tt.wantNames)
 			}
 		})
 	}

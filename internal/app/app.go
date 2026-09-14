@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -130,7 +131,16 @@ func (app *Application) Run() error {
 
 func (app *Application) validateConfig() error {
 	if app.config.Input.String != "" && app.config.Input.File != "" {
-		return NewError(ErrCodeUsage, "conflicting inputs: --input and --file cannot be used together", nil)
+		return NewError(ErrCodeUsage, MsgConflictingInputs, nil)
+	}
+	if app.config.Output.Precision > MaxPrecision {
+		return NewError(ErrCodeUsage, fmt.Sprintf("precision exceeds maximum limit of %d", MaxPrecision), nil)
+	}
+	if app.config.Output.MaxColWidth > MaxColumnWidth {
+		return NewError(ErrCodeUsage, fmt.Sprintf("max column width exceeds maximum limit of %d", MaxColumnWidth), nil)
+	}
+	if app.config.Flatten.MaxDepth > MaxDepthLimit {
+		return NewError(ErrCodeUsage, fmt.Sprintf("max depth exceeds maximum limit of %d", MaxDepthLimit), nil)
 	}
 	return nil
 }
@@ -252,6 +262,16 @@ func (app *Application) processArray(arr []any, flattenOpts flatten.Options) (re
 	filteredHeaders, err := app.applySelection(headers)
 	if err != nil {
 		return render.Model{}, err
+	}
+
+	// If no rows remain after filtering and sorting, return empty rows model
+	if len(sortedRows) == 0 {
+		return render.Model{
+			Mode:        render.ModeRows,
+			Headers:     filteredHeaders,
+			Rows:        nil,
+			IndexColumn: app.config.Output.IndexColumn,
+		}, nil
 	}
 
 	// If limit is 1, treat it as single object
@@ -386,31 +406,39 @@ func (app *Application) applySorting(rows []flatten.FlatKV) []flatten.FlatKV {
 	return sorter.Sort(rows)
 }
 
-func (app *Application) writeOutput(output string) error {
+func (app *Application) writeOutput(output string) (err error) {
 	var writer io.Writer = os.Stdout
 
 	if app.config.Output.FilePath != "" {
-		file, err := os.Create(app.config.Output.FilePath)
-		if err != nil {
-			return err
+		file, createErr := os.Create(app.config.Output.FilePath)
+		if createErr != nil {
+			return createErr
 		}
-		defer func() { _ = file.Close() }()
+		defer func() {
+			if closeErr := file.Close(); closeErr != nil && err == nil {
+				err = closeErr
+			}
+		}()
 		writer = file
 	}
 
-	if !endsWithNewline(output) {
-		output += "\n"
+	if _, err = io.WriteString(writer, output); err != nil {
+		return err
 	}
 
-	_, err := io.WriteString(writer, output)
-	return err
+	if !endsWithNewline(output) {
+		_, err = io.WriteString(writer, "\n")
+		return err
+	}
+
+	return nil
 }
 
 // Helper functions
 func splitCommaString(s string) []string {
 	var result []string
-	for _, part := range splitString(s, ",") {
-		part = trimSpace(part)
+	for part := range strings.SplitSeq(s, ",") {
+		part = strings.TrimSpace(part)
 		if part != "" {
 			result = append(result, part)
 		}
@@ -419,38 +447,21 @@ func splitCommaString(s string) []string {
 }
 
 func splitLines(s string) []string {
-	return splitString(s, "\n")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
 }
 
 func splitString(s, sep string) []string {
 	if s == "" {
 		return nil
 	}
-	var result []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if i+len(sep) <= len(s) && s[i:i+len(sep)] == sep {
-			result = append(result, s[start:i])
-			start = i + len(sep)
-			i += len(sep) - 1
-		}
-	}
-	result = append(result, s[start:])
-	return result
+	return strings.Split(s, sep)
 }
 
 func trimSpace(s string) string {
-	start := 0
-	end := len(s)
-
-	for start < end && isSpace(s[start]) {
-		start++
-	}
-	for end > start && isSpace(s[end-1]) {
-		end--
-	}
-
-	return s[start:end]
+	return strings.TrimSpace(s)
 }
 
 func isSpace(c byte) bool {

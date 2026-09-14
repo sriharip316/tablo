@@ -18,6 +18,14 @@ func TestFlattenSimple(t *testing.T) {
 	}
 }
 
+func TestFlatten_EmptyArray(t *testing.T) {
+	m := map[string]any{"a": 1, "items": []any{}}
+	kv := FlattenObject(m, Options{Enabled: true, MaxDepth: -1})
+	if v, ok := kv["items"]; !ok || v != "[]" {
+		t.Fatalf("expected items to be '[]', got %+v", kv)
+	}
+}
+
 func TestFlatten_Disabled(t *testing.T) {
 	obj := map[string]any{"a": 1, "b": map[string]any{"c": 2}, "d": []any{"x", 2}}
 	kv := FlattenObject(obj, Options{Enabled: false})

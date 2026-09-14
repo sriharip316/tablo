@@ -44,12 +44,17 @@ func TestGlobToRegex(t *testing.T) {
 	}
 }
 
-// Placeholder test ensuring representative glob patterns compile successfully.
-// We only use patterns that translate cleanly to regex via globToRegex.
-func TestCompileMany_GlobWeirdButValid(t *testing.T) {
-	cases := []string{"[abc]*", "a?b", "plain"}
-	if _, err := CompileMany(cases); err != nil {
-		t.Fatalf("expected all glob patterns to compile, got err=%v", err)
+func TestCompileMany_GlobWithMetachars(t *testing.T) {
+	cases := []string{"[abc]*", "a?b", "plain", "items[0*", "val+*", "count(total)*"}
+	exprs, err := CompileMany(cases)
+	if err != nil {
+		t.Fatalf("expected all glob patterns to compile safely, got err=%v", err)
+	}
+
+	keys := []string{"items[01", "val+1", "count(total)2", "other"}
+	out := ApplyToKeys(keys, exprs, nil)
+	if len(out) != 3 {
+		t.Fatalf("expected 3 matched keys, got %v", out)
 	}
 }
 

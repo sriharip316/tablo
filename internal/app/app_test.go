@@ -444,6 +444,41 @@ func TestProcessArray_LimitOne_AsObject(t *testing.T) {
 	}
 }
 
+func TestProcessArray_LimitOne_EmptyRows(t *testing.T) {
+	app := New(Config{Output: OutputConfig{Limit: 1}}, nil)
+	arr := []any{}
+	model, err := app.processArray(arr, flatten.Options{Enabled: false})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(model.Rows) != 0 {
+		t.Fatalf("expected 0 rows, got %d", len(model.Rows))
+	}
+}
+
+func TestValidateConfig_Limits(t *testing.T) {
+	// Precision limit
+	app := New(Config{Output: OutputConfig{Precision: MaxPrecision + 1}}, nil)
+	err := app.validateConfig()
+	if err == nil || !strings.Contains(err.Error(), "precision exceeds maximum limit") {
+		t.Errorf("expected precision limit error, got: %v", err)
+	}
+
+	// MaxColWidth limit
+	app = New(Config{Output: OutputConfig{MaxColWidth: MaxColumnWidth + 1}}, nil)
+	err = app.validateConfig()
+	if err == nil || !strings.Contains(err.Error(), "max column width exceeds maximum limit") {
+		t.Errorf("expected max column width limit error, got: %v", err)
+	}
+
+	// MaxDepth limit
+	app = New(Config{Flatten: FlattenConfig{MaxDepth: MaxDepthLimit + 1}}, nil)
+	err = app.validateConfig()
+	if err == nil || !strings.Contains(err.Error(), "max depth exceeds maximum limit") {
+		t.Errorf("expected max depth limit error, got: %v", err)
+	}
+}
+
 func TestProcessData_Primitive(t *testing.T) {
 	app := New(Config{}, nil)
 	m, err := app.processData(123)

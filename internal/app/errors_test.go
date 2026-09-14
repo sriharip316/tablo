@@ -121,6 +121,21 @@ func TestAppError_Is(t *testing.T) {
 	if err1.Is(regularErr) {
 		t.Error("AppError.Is(): expected false for non-AppError")
 	}
+
+	var nilAppErr *AppError
+	if err1.Is(nilAppErr) {
+		t.Error("AppError.Is(): expected false for typed nil AppError")
+	}
+
+	var nilErr error
+	if err1.Is(nilErr) {
+		t.Error("AppError.Is(): expected false for nil error")
+	}
+
+	var nilSelf *AppError
+	if !nilSelf.Is(nilAppErr) {
+		t.Error("AppError.Is(): expected true for nil self and nil target")
+	}
 }
 
 func TestNewError(t *testing.T) {
@@ -279,6 +294,11 @@ func TestAsAppError(t *testing.T) {
 	}
 	if target != nil {
 		t.Error("AsAppError: target should remain nil for nil error")
+	}
+
+	// Test with nil target pointer
+	if AsAppError(appErr, nil) {
+		t.Error("AsAppError: expected false for nil target pointer")
 	}
 }
 

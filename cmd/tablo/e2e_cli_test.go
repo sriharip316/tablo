@@ -517,3 +517,57 @@ func TestCLI_NoInput_ShowsHelp(t *testing.T) {
 		t.Fatalf("expected help text with 'Flags:', got: %s", out)
 	}
 }
+
+func TestCLI_SortJSONNumbers(t *testing.T) {
+	jsonInput := `[{"val": 20}, {"val": 100}, {"val": 3}]`
+	args := []string{"-i", jsonInput, "--sort", "val", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	idx3 := strings.Index(out, "3")
+	idx20 := strings.Index(out, "20")
+	idx100 := strings.Index(out, "100")
+	if idx3 == -1 || idx20 == -1 || idx100 == -1 {
+		t.Fatalf("missing expected values in output: %s", out)
+	}
+	if idx3 >= idx20 || idx20 >= idx100 {
+		t.Fatalf("expected numeric order (3, 20, 100), got: %s", out)
+	}
+}
+
+func TestCLI_LimitOne_ZeroRows(t *testing.T) {
+	jsonInput := `[]`
+	args := []string{"-i", jsonInput, "--limit", "1", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	if strings.TrimSpace(out) != "" {
+		t.Fatalf("expected empty output for empty input with limit 1, got: %s", out)
+	}
+}
+
+func TestCLI_FilterOperatorInValue(t *testing.T) {
+	jsonInput := `[{"a": "hello!=world"}, {"a": "other"}]`
+	args := []string{"-i", jsonInput, "-w", "a=hello!=world", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	if !strings.Contains(out, "hello!=world") || strings.Contains(out, "other") {
+		t.Fatalf("unexpected filter output: %s", out)
+	}
+}
+
+func TestCLI_FlattenEmptyArray(t *testing.T) {
+	jsonInput := `{"name": "test", "items": []}`
+	args := []string{"-i", jsonInput, "--dive", "--style", "ascii"}
+	out, errOut, code, err := runCLI(t, args, nil)
+	if err != nil || code != 0 {
+		t.Fatalf("err=%v code=%d stderr=%s", err, code, errOut)
+	}
+	if !strings.Contains(out, "items") || !strings.Contains(out, "[]") {
+		t.Fatalf("expected items key and [] value in output, got: %s", out)
+	}
+}

@@ -19,9 +19,11 @@ func main() {
 	var config app.Config
 
 	root := &cobra.Command{
-		Use:     "tablo",
-		Version: version,
-		Short:   "Render JSON/YAML as tables",
+		Use:           "tablo",
+		Version:       version,
+		Short:         "Render JSON/YAML as tables",
+		SilenceErrors: true,
+		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if there's no input provided
 			if hasNoInput(&config) {
@@ -88,24 +90,19 @@ func hasNoInput(config *app.Config) bool {
 		return false
 	}
 
-	// Check if stdin is a terminal (interactive mode)
+	// Check if stdin is a terminal or character device (interactive mode or /dev/null when no input attached)
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		return true
 	}
 
-	// If stdin is a character device (terminal), we have no piped input
 	isCharDevice := (stat.Mode() & os.ModeCharDevice) != 0
-
-	// Use term.IsTerminal as fallback for more reliable terminal detection
 	isTerminal := term.IsTerminal(int(os.Stdin.Fd()))
 
-	// If it's a character device or terminal, no piped input available
 	if isCharDevice || isTerminal {
 		return true
 	}
 
-	// If it's a pipe or regular file (not char device), we have input
 	return false
 }
 
